@@ -33,19 +33,20 @@
 
             <ul class="nav nav-pills">
                 <li v-if="$root.loggedIn" class="nav-item me-2">
-                    <router-link to="/" class="nav-link">
-                        <font-awesome-icon icon="home" /> {{ $t("home") }}
+                    <router-link :to="homeLink" class="nav-link">
+                        <font-awesome-icon :icon="isPm2Mode ? 'layer-group' : 'home'" />
+                        {{ isPm2Mode ? $t("pm2Overview") : $t("home") }}
                     </router-link>
                 </li>
 
-                <li v-if="$root.loggedIn" class="nav-item me-2">
+                <li v-if="$root.loggedIn && !isPm2Mode" class="nav-item me-2">
                     <router-link to="/updates" class="nav-link">
                         <font-awesome-icon icon="circle-up" /> {{ $t("updates") }}
                         <span v-if="updateCount > 0" class="badge bg-danger ms-1">{{ updateCount }}</span>
                     </router-link>
                 </li>
 
-                <li v-if="$root.loggedIn" class="nav-item me-2">
+                <li v-if="$root.loggedIn && !isPm2Mode" class="nav-item me-2">
                     <router-link to="/console" class="nav-link">
                         <font-awesome-icon icon="terminal" /> {{ $t("console") }}
                     </router-link>
@@ -78,7 +79,7 @@
                                 </router-link>
                             </li>-->
 
-                            <li>
+                            <li v-if="!isPm2Mode">
                                 <button class="dropdown-item" @click="scanFolder">
                                     <font-awesome-icon icon="arrows-rotate" /> {{ $t("scanFolder") }}
                                 </button>
@@ -113,33 +114,53 @@
 
         <!-- Mobile bottom navigation -->
         <nav v-if="$root.isMobile && $root.loggedIn" class="bottom-nav">
-            <router-link to="/" class="bottom-nav-item" exact-active-class="active">
-                <div><font-awesome-icon icon="home" /></div>
-                {{ $t("home") }}
-            </router-link>
-            <a class="bottom-nav-item" :class="{ active: $root.showMobileStackList }" @click.prevent="$root.showMobileStackList = !$root.showMobileStackList">
-                <div><font-awesome-icon icon="layer-group" /></div>
-                {{ $t("Stacks") }}
-            </a>
-            <router-link to="/updates" class="bottom-nav-item" active-class="active">
-                <div class="update-icon-wrapper">
-                    <font-awesome-icon icon="circle-up" />
-                    <span v-if="updateCount > 0" class="mobile-update-badge">{{ updateCount }}</span>
-                </div>
-                {{ $t("updates") }}
-            </router-link>
-            <router-link to="/console" class="bottom-nav-item" active-class="active">
-                <div><font-awesome-icon icon="terminal" /></div>
-                {{ $t("console") }}
-            </router-link>
-            <router-link to="/pm2" class="bottom-nav-item" active-class="active">
-                <div><font-awesome-icon icon="microchip" /></div>
-                {{ $t("pm2") }}
-            </router-link>
-            <router-link to="/settings/general" class="bottom-nav-item" active-class="active">
-                <div><font-awesome-icon icon="cog" /></div>
-                {{ $t("Settings") }}
-            </router-link>
+            <template v-if="!isPm2Mode">
+                <router-link to="/" class="bottom-nav-item" exact-active-class="active">
+                    <div><font-awesome-icon icon="home" /></div>
+                    {{ $t("home") }}
+                </router-link>
+                <a class="bottom-nav-item" :class="{ active: $root.showMobileStackList }" @click.prevent="$root.showMobileStackList = !$root.showMobileStackList">
+                    <div><font-awesome-icon icon="layer-group" /></div>
+                    {{ $t("Stacks") }}
+                </a>
+                <router-link to="/updates" class="bottom-nav-item" active-class="active">
+                    <div class="update-icon-wrapper">
+                        <font-awesome-icon icon="circle-up" />
+                        <span v-if="updateCount > 0" class="mobile-update-badge">{{ updateCount }}</span>
+                    </div>
+                    {{ $t("updates") }}
+                </router-link>
+                <router-link to="/console" class="bottom-nav-item" active-class="active">
+                    <div><font-awesome-icon icon="terminal" /></div>
+                    {{ $t("console") }}
+                </router-link>
+                <router-link to="/settings/general" class="bottom-nav-item" active-class="active">
+                    <div><font-awesome-icon icon="cog" /></div>
+                    {{ $t("Settings") }}
+                </router-link>
+                <router-link to="/pm2" class="bottom-nav-item mode-switch-item" active-class="active">
+                    <div><font-awesome-icon icon="microchip" /></div>
+                    {{ $t("modePm2") }}
+                </router-link>
+            </template>
+            <template v-else>
+                <router-link to="/pm2" class="bottom-nav-item" exact-active-class="active">
+                    <div><font-awesome-icon icon="layer-group" /></div>
+                    {{ $t("pm2Overview") }}
+                </router-link>
+                <a class="bottom-nav-item" :class="{ active: $root.showMobilePm2List }" @click.prevent="$root.showMobilePm2List = !$root.showMobilePm2List">
+                    <div><font-awesome-icon icon="microchip" /></div>
+                    {{ $t("pm2Processes") }}
+                </a>
+                <router-link to="/settings/general" class="bottom-nav-item" active-class="active">
+                    <div><font-awesome-icon icon="cog" /></div>
+                    {{ $t("Settings") }}
+                </router-link>
+                <router-link to="/" class="bottom-nav-item mode-switch-item">
+                    <div><font-awesome-icon icon="home" /></div>
+                    {{ $t("modeDockge") }}
+                </router-link>
+            </template>
         </nav>
     </div>
 </template>
@@ -176,6 +197,10 @@ export default {
         },
 
         logoLink() {
+            return this.isPm2Mode ? "/pm2" : "/";
+        },
+
+        homeLink() {
             return this.isPm2Mode ? "/pm2" : "/";
         },
 
@@ -243,6 +268,25 @@ export default {
         text-align: center;
         flex: 1 1 0;
         min-width: 0;
+
+        &.mode-switch-item {
+            position: relative;
+            color: $primary;
+
+            div {
+                color: $primary;
+            }
+
+            &::before {
+                content: "";
+                position: absolute;
+                left: 4px;
+                top: 12px;
+                bottom: 12px;
+                width: 1px;
+                background-color: rgba(0, 0, 0, 0.1);
+            }
+        }
         display: inline-flex;
         flex-direction: column;
         align-items: center;

@@ -11,18 +11,18 @@
         </div>
 
         <!-- Mobile PM2 list offcanvas -->
-        <div v-if="$root.isMobile" class="offcanvas offcanvas-start" :class="{ show: showMobileList }" tabindex="-1">
+        <div v-if="$root.isMobile" class="offcanvas offcanvas-start" :class="{ show: $root.showMobilePm2List }" tabindex="-1">
             <div class="offcanvas-header">
                 <h5 class="offcanvas-title">
                     <font-awesome-icon icon="microchip" class="me-1" /> {{ $t("pm2Processes") }}
                 </h5>
-                <button type="button" class="btn-close" @click="showMobileList = false"></button>
+                <button type="button" class="btn-close" @click="$root.showMobilePm2List = false"></button>
             </div>
             <div class="offcanvas-body">
-                <PM2List @item-click="showMobileList = false" />
+                <PM2List @item-click="$root.showMobilePm2List = false" />
             </div>
         </div>
-        <div v-if="$root.isMobile && showMobileList" class="offcanvas-backdrop fade show" @click="showMobileList = false"></div>
+        <div v-if="$root.isMobile && $root.showMobilePm2List" class="offcanvas-backdrop fade show" @click="$root.showMobilePm2List = false"></div>
     </div>
 </template>
 
@@ -52,12 +52,11 @@ export default {
     data() {
         return {
             timer: null,
-            showMobileList: false,
         };
     },
     watch: {
         "$route.fullPath"() {
-            this.showMobileList = false;
+            this.$root.showMobilePm2List = false;
         },
     },
     mounted() {

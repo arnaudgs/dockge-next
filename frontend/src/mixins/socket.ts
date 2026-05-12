@@ -48,6 +48,7 @@ export default defineComponent({
 
             isMobile: window.innerWidth <= 768,
             showMobileStackList: false,
+            showMobilePm2List: false,
         };
     },
     computed: {
