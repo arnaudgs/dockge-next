@@ -11,10 +11,21 @@
 
         <!-- Desktop header -->
         <header v-if="! $root.isMobile" class="d-flex flex-wrap justify-content-center py-3 mb-3 border-bottom">
-            <router-link to="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+            <router-link :to="logoLink" class="d-flex align-items-center mb-3 mb-md-0 text-dark text-decoration-none">
                 <object class="bi me-2 ms-4" width="40" height="40" data="/icon.svg" />
                 <span class="fs-4 title">Dockge</span>
             </router-link>
+
+            <div v-if="$root.loggedIn" class="mode-switcher ms-3 me-md-auto">
+                <router-link to="/" class="mode-btn" :class="{ active: !isPm2Mode }">
+                    <font-awesome-icon icon="layer-group" class="me-1" />
+                    {{ $t("modeDockge") }}
+                </router-link>
+                <router-link to="/pm2" class="mode-btn" :class="{ active: isPm2Mode }">
+                    <font-awesome-icon icon="microchip" class="me-1" />
+                    {{ $t("modePm2") }}
+                </router-link>
+            </div>
 
             <a v-if="hasNewVersion" target="_blank" href="https://github.com/louislam/dockge/releases" class="btn btn-warning me-3">
                 <font-awesome-icon icon="arrow-alt-circle-up" /> {{ $t("newUpdate") }}
@@ -37,12 +48,6 @@
                 <li v-if="$root.loggedIn" class="nav-item me-2">
                     <router-link to="/console" class="nav-link">
                         <font-awesome-icon icon="terminal" /> {{ $t("console") }}
-                    </router-link>
-                </li>
-
-                <li v-if="$root.loggedIn" class="nav-item me-2">
-                    <router-link to="/pm2" class="nav-link">
-                        <font-awesome-icon icon="microchip" /> {{ $t("pm2") }}
                     </router-link>
                 </li>
 
@@ -164,6 +169,14 @@ export default {
             classes[this.$root.theme] = true;
             classes["mobile"] = this.$root.isMobile;
             return classes;
+        },
+
+        isPm2Mode() {
+            return this.$route.path.startsWith("/pm2");
+        },
+
+        logoLink() {
+            return this.isPm2Mode ? "/pm2" : "/";
         },
 
         updateCount() {
@@ -301,6 +314,57 @@ main {
     position: fixed;
     width: 100%;
     z-index: 99999;
+}
+
+.mode-switcher {
+    display: inline-flex;
+    padding: 4px;
+    border-radius: 50rem;
+    background-color: rgba(0, 0, 0, 0.04);
+    gap: 2px;
+
+    .mode-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 6px 16px;
+        border-radius: 50rem;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        color: #555;
+        transition: all 0.2s $easing-out;
+
+        &:hover {
+            color: $primary;
+            background-color: rgba(116, 194, 255, 0.1);
+        }
+
+        &.active {
+            color: white;
+            background: $primary-gradient;
+            box-shadow: 0 2px 8px rgba(116, 194, 255, 0.4);
+        }
+    }
+}
+
+.dark {
+    .mode-switcher {
+        background-color: rgba(255, 255, 255, 0.05);
+
+        .mode-btn {
+            color: $dark-font-color;
+
+            &:hover {
+                color: $primary;
+                background-color: rgba(116, 194, 255, 0.12);
+            }
+
+            &.active {
+                color: $dark-font-color2;
+                box-shadow: 0 2px 8px rgba(116, 194, 255, 0.3);
+            }
+        }
+    }
 }
 
 // Profile Pic Button with Dropdown

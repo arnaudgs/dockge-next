@@ -11,6 +11,8 @@ import ContainerTerminal from "./pages/ContainerTerminal.vue";
 const Settings = () => import("./pages/Settings.vue");
 const Updates = () => import("./pages/Updates.vue");
 const PM2 = () => import("./pages/PM2.vue");
+const PM2Home = () => import("./pages/PM2Home.vue");
+const PM2Detail = () => import("./pages/PM2Detail.vue");
 
 // Settings - Sub Pages
 import Appearance from "./components/settings/Appearance.vue";
@@ -73,6 +75,18 @@ const routes = [
                     {
                         path: "/pm2",
                         component: PM2,
+                        children: [
+                            {
+                                name: "PM2Home",
+                                path: "",
+                                component: PM2Home,
+                            },
+                            {
+                                name: "PM2Detail",
+                                path: ":name",
+                                component: PM2Detail,
+                            },
+                        ],
                     },
                     {
                         path: "/settings",
