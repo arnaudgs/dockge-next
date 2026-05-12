@@ -325,6 +325,11 @@ export default {
 
 .pm2-table {
     margin-bottom: 0;
+    // Let cells inherit the shadow-box / page background instead of forcing white.
+    --bs-table-bg: transparent;
+    --bs-table-color: inherit;
+    background-color: transparent;
+    color: inherit;
 
     th {
         font-weight: 600;
@@ -333,7 +338,7 @@ export default {
         letter-spacing: 0.04em;
         color: #6c757d;
         border-bottom: 1px solid rgba(0, 0, 0, 0.08);
-        background-color: rgba(0, 0, 0, 0.015);
+        background-color: rgba(0, 0, 0, 0.025);
         white-space: nowrap;
         user-select: none;
     }
