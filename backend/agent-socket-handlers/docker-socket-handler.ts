@@ -188,7 +188,7 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 }
 
                 const stack = await Stack.getStack(server, stackName);
-                await stack.update(socket);
+                await stack.update(socket.endpoint, socket);
 
                 // Clear cached update info — image just got pulled
                 server.imageUpdates.delete(stackName as string);
@@ -204,7 +204,9 @@ export class DockerSocketHandler extends AgentSocketHandler {
             }
         });
 
-        // updateStacks (batch) — backend-driven queue so user can close the browser
+        // updateStacks (batch) — fully backend-driven queue managed by
+        // server.updateManager. Progress is broadcast to every authenticated
+        // socket so closing/reopening the browser does not lose visibility.
         agentSocket.on("updateStacks", async (stackNames : unknown, callback) => {
             try {
                 checkLogin(socket);
@@ -213,52 +215,25 @@ export class DockerSocketHandler extends AgentSocketHandler {
                     throw new ValidationError("Stack names must be an array of strings");
                 }
 
-                const names = stackNames as string[];
+                server.updateManager.start(stackNames as string[], socket.endpoint);
 
-                // Acknowledge immediately — processing continues server-side
                 callbackResult({
                     ok: true,
                     msg: "Update queue started",
                 }, callback);
+            } catch (e) {
+                callbackError(e, callback);
+            }
+        });
 
-                for (let i = 0; i < names.length; i++) {
-                    const stackName = names[i];
-                    try {
-                        socket.emit("updateStacksProgress", {
-                            current: stackName,
-                            index: i,
-                            total: names.length,
-                            status: "updating",
-                        });
-
-                        const stack = await Stack.getStack(server, stackName);
-                        await stack.update(socket);
-                        server.imageUpdates.delete(stackName);
-
-                        socket.emit("updateStacksProgress", {
-                            current: stackName,
-                            index: i,
-                            total: names.length,
-                            status: "done",
-                        });
-                        server.sendStackList();
-                    } catch (e) {
-                        socket.emit("updateStacksProgress", {
-                            current: stackName,
-                            index: i,
-                            total: names.length,
-                            status: "error",
-                            error: e instanceof Error ? e.message : String(e),
-                        });
-                    }
-                }
-
-                socket.emit("updateStacksProgress", {
-                    current: "",
-                    index: names.length,
-                    total: names.length,
-                    status: "complete",
-                });
+        // getUpdateState — let any client (re)sync on the in-flight queue.
+        agentSocket.on("getUpdateState", async (callback) => {
+            try {
+                checkLogin(socket);
+                callbackResult({
+                    ok: true,
+                    state: server.updateManager.getState(),
+                }, callback);
             } catch (e) {
                 callbackError(e, callback);
             }

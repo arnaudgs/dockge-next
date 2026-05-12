@@ -38,6 +38,7 @@ import { AgentSocket } from "../common/agent-socket";
 import { ManageAgentSocketHandler } from "./socket-handlers/manage-agent-socket-handler";
 import { Terminal } from "./terminal";
 import { ImageUpdateChecker, ImageUpdateInfo } from "./image-update-checker";
+import { UpdateManager } from "./update-manager";
 import { UPDATE_CHECK_CRON, UPDATE_CHECK_INITIAL_DELAY } from "../common/util-common";
 
 export class DockgeServer {
@@ -47,6 +48,7 @@ export class DockgeServer {
     io : socketIO.Server;
     config : Config;
     imageUpdates : Map<string, ImageUpdateInfo[]> = new Map();
+    updateManager : UpdateManager = new UpdateManager(this);
     indexHTML : string = "";
 
     /**

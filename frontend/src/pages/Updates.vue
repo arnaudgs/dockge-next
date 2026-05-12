@@ -154,26 +154,14 @@ export default {
         });
 
         // Listen for backend progress events
-        this.$root.getSocket().on("updateStacksProgress", (data) => {
-            this.progressTotal = data.total;
+        this.$root.getSocket().on("updateStacksProgress", this.onProgress);
 
-            if (data.status === "updating") {
-                this.currentUpdating = data.current;
-                this.progressIndex = data.index;
-            } else if (data.status === "done") {
-                this.stackStatus[data.current] = "done";
-                this.progressIndex = data.index + 1;
-            } else if (data.status === "error") {
-                this.stackStatus[data.current] = "error";
-                this.progressIndex = data.index + 1;
-            } else if (data.status === "complete") {
-                this.updating = false;
-                this.currentUpdating = "";
-            }
-        });
+        // Sync with any update already running server-side (page refresh,
+        // newly-opened tab, reconnect after offline).
+        this.syncUpdateState();
     },
     unmounted() {
-        this.$root.getSocket().off("updateStacksProgress");
+        this.$root.getSocket().off("updateStacksProgress", this.onProgress);
     },
     methods: {
         stackUrl(stack) {
@@ -245,6 +233,53 @@ export default {
                     this.updating = false;
                     this.$root.toastRes(res);
                 }
+            });
+        },
+
+        onProgress(data) {
+            this.progressTotal = data.total;
+
+            if (data.status === "started") {
+                this.updating = true;
+                this.progressIndex = data.index;
+                this.currentUpdating = data.current;
+            } else if (data.status === "updating") {
+                this.updating = true;
+                this.currentUpdating = data.current;
+                this.progressIndex = data.index;
+            } else if (data.status === "done") {
+                this.stackStatus[data.current] = "done";
+                this.progressIndex = data.index + 1;
+            } else if (data.status === "error") {
+                this.stackStatus[data.current] = "error";
+                this.progressIndex = data.index + 1;
+            } else if (data.status === "complete") {
+                this.updating = false;
+                this.currentUpdating = "";
+            }
+        },
+
+        syncUpdateState() {
+            this.$root.emitAgent("", "getUpdateState", (res) => {
+                if (!res || !res.ok || !res.state) {
+                    return;
+                }
+                const state = res.state;
+                this.progressTotal = state.total;
+                this.progressIndex = state.index;
+                this.currentUpdating = state.current || "";
+                this.updating = state.running;
+
+                // Restore per-stack badges so done/error stay visible on
+                // refresh, even after the queue has finished.
+                const status = {};
+                for (const name in state.items) {
+                    const item = state.items[name];
+                    if (item.status === "done" || item.status === "error") {
+                        status[name] = item.status;
+                    }
+                }
+                this.stackStatus = status;
             });
         },
     },

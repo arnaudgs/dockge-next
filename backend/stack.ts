@@ -460,8 +460,8 @@ export class Stack {
         return exitCode;
     }
 
-    async update(socket: DockgeSocket) {
-        const terminalName = getComposeTerminalName(socket.endpoint, this.name);
+    async update(endpoint : string, socket? : DockgeSocket) {
+        const terminalName = getComposeTerminalName(endpoint, this.name);
         let exitCode = await Terminal.exec(this.server, socket, terminalName, "docker", this.getComposeOptions("pull"), this.path);
         if (exitCode !== 0) {
             throw new Error("Failed to pull, please check the terminal output for more information.");
