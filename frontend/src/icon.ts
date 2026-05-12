@@ -57,6 +57,8 @@ import {
     faCloudArrowDown, faArrowsRotate, faLayerGroup, faCircleUp, faSync,
     faChevronCircleRight,
     faChevronCircleDown,
+    faMicrochip,
+    faExclamationTriangle,
 } from "@fortawesome/free-solid-svg-icons";
 
 library.add(
@@ -118,6 +120,8 @@ library.add(
     faSync,
     faChevronCircleRight,
     faChevronCircleDown,
+    faMicrochip,
+    faExclamationTriangle,
 );
 
 export { FontAwesomeIcon };

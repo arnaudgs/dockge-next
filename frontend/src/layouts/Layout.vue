@@ -40,6 +40,12 @@
                     </router-link>
                 </li>
 
+                <li v-if="$root.loggedIn" class="nav-item me-2">
+                    <router-link to="/pm2" class="nav-link">
+                        <font-awesome-icon icon="microchip" /> {{ $t("pm2") }}
+                    </router-link>
+                </li>
+
                 <li v-if="$root.loggedIn" class="nav-item">
                     <div class="dropdown dropdown-profile-pic">
                         <div class="nav-link" data-bs-toggle="dropdown">
@@ -120,6 +126,10 @@
             <router-link to="/console" class="bottom-nav-item" active-class="active">
                 <div><font-awesome-icon icon="terminal" /></div>
                 {{ $t("console") }}
+            </router-link>
+            <router-link to="/pm2" class="bottom-nav-item" active-class="active">
+                <div><font-awesome-icon icon="microchip" /></div>
+                {{ $t("pm2") }}
             </router-link>
             <router-link to="/settings/general" class="bottom-nav-item" active-class="active">
                 <div><font-awesome-icon icon="cog" /></div>
@@ -218,7 +228,8 @@ export default {
 
     .bottom-nav-item {
         text-align: center;
-        width: 20%;
+        flex: 1 1 0;
+        min-width: 0;
         display: inline-flex;
         flex-direction: column;
         align-items: center;

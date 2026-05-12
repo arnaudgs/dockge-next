@@ -10,6 +10,7 @@ import ContainerTerminal from "./pages/ContainerTerminal.vue";
 
 const Settings = () => import("./pages/Settings.vue");
 const Updates = () => import("./pages/Updates.vue");
+const PM2 = () => import("./pages/PM2.vue");
 
 // Settings - Sub Pages
 import Appearance from "./components/settings/Appearance.vue";
@@ -68,6 +69,10 @@ const routes = [
                     {
                         path: "/console/:endpoint",
                         component: Console,
+                    },
+                    {
+                        path: "/pm2",
+                        component: PM2,
                     },
                     {
                         path: "/settings",
