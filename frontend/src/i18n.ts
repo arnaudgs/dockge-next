@@ -59,6 +59,9 @@ export const localeDirection = () => {
 };
 
 export const i18n = createI18n({
+    // vue-i18n 11 defaults legacy to false; dockge uses Options API
+    // (`this.$t`), so we explicitly opt back into the legacy API.
+    legacy: true,
     locale: currentLocale(),
     fallbackLocale: "en",
     silentFallbackWarn: true,
