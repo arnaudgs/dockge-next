@@ -13,6 +13,7 @@ import http from "http";
 import { Router } from "./router";
 import { Socket } from "socket.io";
 import { MainSocketHandler } from "./socket-handlers/main-socket-handler";
+import { PM2SocketHandler } from "./socket-handlers/pm2-socket-handler";
 import { SocketHandler } from "./socket-handler";
 import { Settings } from "./settings";
 import checkVersion from "./check-version";
@@ -30,7 +31,7 @@ import { Stack } from "./stack";
 import { Cron } from "croner";
 import gracefulShutdown from "http-graceful-shutdown";
 import User from "./models/user";
-import childProcessAsync from "promisify-child-process";
+import * as childProcessAsync from "promisify-child-process";
 import { AgentManager } from "./agent-manager";
 import { AgentProxySocketHandler } from "./socket-handlers/agent-proxy-socket-handler";
 import { AgentSocketHandler } from "./agent-socket-handler";
@@ -64,6 +65,7 @@ export class DockgeServer {
     socketHandlerList : SocketHandler[] = [
         new MainSocketHandler(),
         new ManageAgentSocketHandler(),
+        new PM2SocketHandler(),
     ];
 
     agentProxySocketHandler = new AgentProxySocketHandler();
@@ -203,7 +205,7 @@ export class DockgeServer {
         }));
 
         // Universal Route Handler, must be at the end of all express routes.
-        this.app.get("*", async (_request, response) => {
+        this.app.get(/.*/, async (_request, response) => {
             response.send(this.indexHTML);
         });
 
@@ -401,7 +403,7 @@ export class DockgeServer {
             }
 
             // Run every 10 seconds
-            Cron("*/10 * * * * *", {
+            new Cron("*/10 * * * * *", {
                 protect: true,  // Enabled over-run protection.
             }, () => {
                 //log.debug("server", "Cron job running");
@@ -414,7 +416,7 @@ export class DockgeServer {
             ImageUpdateChecker.load(this);
 
             // Image update checker - run every 24h
-            Cron(UPDATE_CHECK_CRON, {
+            new Cron(UPDATE_CHECK_CRON, {
                 protect: true,
             }, () => {
                 ImageUpdateChecker.checkAllStacks(this);
@@ -647,12 +649,12 @@ export class DockgeServer {
             return [];
         }
 
-        let list = res.stdout.toString().split("\n");
+        let list : string[] = res.stdout.toString().split("\n");
 
         // Remove empty string item
-        list = list.filter((item) => {
+        list = list.filter((item : string) => {
             return item !== "";
-        }).sort((a, b) => {
+        }).sort((a : string, b : string) => {
             return a.localeCompare(b);
         });
 

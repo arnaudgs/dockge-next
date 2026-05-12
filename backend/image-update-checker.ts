@@ -1,5 +1,5 @@
 import { log } from "./log";
-import childProcessAsync from "promisify-child-process";
+import * as childProcessAsync from "promisify-child-process";
 import { DockgeServer } from "./dockge-server";
 import { Stack } from "./stack";
 import semver from "semver";
