@@ -66,6 +66,43 @@
                 </button>
             </div>
 
+            <!-- Aggregate stats for the stack -->
+            <div v-if="!isAdd && !isEditMode && aggregateStats.containers > 0" class="row g-3 mb-3 stack-stats-strip">
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("Container | Containers") }}</div>
+                        <div class="stat-value stat-mono">{{ aggregateStats.containers }}</div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("CPU") }}</div>
+                        <div class="stat-value">{{ aggregateStats.cpu.toFixed(1) }}<span class="stat-unit">%</span></div>
+                        <div class="metric-bar mt-2">
+                            <div class="metric-fill cpu" :style="{ width: Math.min(aggregateStats.cpu, 100) + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("memory") }}</div>
+                        <div class="stat-value">{{ aggregateStats.memoryValue }}<span class="stat-unit">{{ aggregateStats.memoryUnit }}</span></div>
+                        <div class="metric-bar mt-2">
+                            <div class="metric-fill mem" :style="{ width: aggregateStats.memoryPercent + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("Status") }}</div>
+                        <div class="stat-value stat-status">
+                            <span class="status-dot" :class="`status-${stackStatusName}`"></span>
+                            {{ $t(stackStatusName) }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Update Details -->
             <div v-if="hasUpdates && !isEditMode" class="shadow-box big-padding mb-3 update-details-panel">
                 <h5 class="mb-2">
@@ -294,7 +331,8 @@ import {
     getCombinedTerminalName,
     getComposeTerminalName,
     PROGRESS_TERMINAL_ROWS,
-    RUNNING
+    RUNNING,
+    statusName
 } from "../../../common/util-common";
 import { BModal } from "bootstrap-vue-next";
 import NetworkInput from "../components/NetworkInput.vue";
@@ -433,6 +471,63 @@ export default {
 
         hasUpdates() {
             return this.globalStack?.updates?.length > 0;
+        },
+
+        stackStatusName() {
+            return statusName(this.status);
+        },
+
+        aggregateStats() {
+            let cpu = 0;
+            let memory = 0;
+            let count = 0;
+            const stackName = this.stack.name;
+            if (!stackName) {
+                return { containers: 0, cpu: 0, memory: 0, memoryValue: "0", memoryUnit: " B", memoryPercent: 0 };
+            }
+            const prefixDash = stackName + "-";
+            const prefixUnderscore = stackName + "_";
+            for (const name in this.dockerStats) {
+                if (!name.startsWith(prefixDash) && !name.startsWith(prefixUnderscore)) {
+                    continue;
+                }
+                const c = this.dockerStats[name];
+                count++;
+                const cpuStr = (c.CPUPerc || "").replace("%", "");
+                const cpuVal = parseFloat(cpuStr);
+                if (!isNaN(cpuVal)) {
+                    cpu += cpuVal;
+                }
+                const memStr = (c.MemUsage || "").split("/")[0].trim();
+                const m = memStr.match(/^([\d.]+)\s*([KMGTP]?i?B)$/i);
+                if (m) {
+                    const n = parseFloat(m[1]);
+                    const unit = m[2].toLowerCase();
+                    const multipliers = {
+                        b: 1, kb: 1000, kib: 1024,
+                        mb: 1e6, mib: 1024 ** 2,
+                        gb: 1e9, gib: 1024 ** 3,
+                        tb: 1e12, tib: 1024 ** 4,
+                    };
+                    memory += n * (multipliers[unit] || 1);
+                }
+            }
+            const units = [ "B", "KB", "MB", "GB", "TB" ];
+            let v = memory;
+            let i = 0;
+            while (v >= 1024 && i < units.length - 1) {
+                v /= 1024;
+                i++;
+            }
+            const ceiling = 1024 ** 3;
+            return {
+                containers: count,
+                cpu,
+                memory,
+                memoryValue: memory ? v.toFixed(v >= 100 ? 0 : 1) : "0",
+                memoryUnit: " " + units[i],
+                memoryPercent: Math.min((memory / ceiling) * 100, 100),
+            };
         },
 
         terminalName() {
@@ -903,6 +998,117 @@ export default {
 
 .terminal {
     height: 200px;
+}
+
+.stack-stats-strip {
+    .stat-card {
+        height: 100%;
+        transition: transform 0.15s ease;
+
+        &:hover {
+            transform: translateY(-2px);
+        }
+    }
+
+    .stat-label {
+        font-size: 0.7rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: #6c757d;
+        margin-bottom: 6px;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #111;
+        line-height: 1.1;
+        font-variant-numeric: tabular-nums;
+
+        .stat-unit {
+            font-size: 0.85rem;
+            font-weight: 400;
+            color: #6c757d;
+            margin-left: 4px;
+        }
+    }
+
+    .stat-mono {
+        font-family: 'JetBrains Mono', monospace;
+    }
+
+    .stat-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 1.05rem;
+        text-transform: capitalize;
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .status-dot.status-running {
+            background-color: #198754;
+            box-shadow: 0 0 0 3px rgba(25, 135, 84, 0.15);
+        }
+
+        .status-dot.status-exited {
+            background-color: $danger;
+        }
+
+        .status-dot.status-draft, .status-dot.status-created_stack {
+            background-color: #6c757d;
+        }
+
+        .status-dot.status-unknown {
+            background-color: $warning;
+        }
+    }
+
+    .metric-bar {
+        width: 100%;
+        height: 4px;
+        background-color: rgba(0, 0, 0, 0.06);
+        border-radius: 2px;
+        overflow: hidden;
+
+        .metric-fill {
+            height: 100%;
+            transition: width 0.4s $easing-out;
+
+            &.cpu {
+                background: $primary-gradient;
+            }
+
+            &.mem {
+                background: linear-gradient(135deg, #86e6a9 0%, #74c2ff 100%);
+            }
+        }
+    }
+}
+
+.dark .stack-stats-strip {
+    .stat-label, .stat-unit {
+        color: $dark-font-color3;
+    }
+
+    .stat-value {
+        color: $dark-font-color;
+    }
+
+    .metric-bar {
+        background-color: rgba(255, 255, 255, 0.06);
+    }
+
+    .stat-status .status-dot.status-running {
+        background-color: #4ade80;
+        box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
+    }
 }
 
 .editor-box {

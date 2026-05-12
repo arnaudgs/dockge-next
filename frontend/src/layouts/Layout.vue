@@ -40,6 +40,12 @@
                 </li>
 
                 <li v-if="$root.loggedIn && !isPm2Mode" class="nav-item me-2">
+                    <router-link to="/stacks" class="nav-link">
+                        <font-awesome-icon icon="layer-group" /> {{ $t("stacksOverview") }}
+                    </router-link>
+                </li>
+
+                <li v-if="$root.loggedIn && !isPm2Mode" class="nav-item me-2">
                     <router-link to="/updates" class="nav-link">
                         <font-awesome-icon icon="circle-up" /> {{ $t("updates") }}
                         <span v-if="updateCount > 0" class="badge bg-danger ms-1">{{ updateCount }}</span>

@@ -13,6 +13,7 @@ const Updates = () => import("./pages/Updates.vue");
 const PM2 = () => import("./pages/PM2.vue");
 const PM2Home = () => import("./pages/PM2Home.vue");
 const PM2Detail = () => import("./pages/PM2Detail.vue");
+const StacksOverview = () => import("./pages/StacksOverview.vue");
 
 // Settings - Sub Pages
 import Appearance from "./components/settings/Appearance.vue";
@@ -75,6 +76,10 @@ const routes = [
                                 name: "containerTerminalEndpoint",
                             },
                         ]
+                    },
+                    {
+                        path: "/stacks",
+                        component: StacksOverview,
                     },
                     {
                         path: "/updates",
