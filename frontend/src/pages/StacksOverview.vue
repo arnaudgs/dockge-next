@@ -310,10 +310,17 @@ export default {
             const prefixDash = stackName + "-";
             const prefixUnderscore = stackName + "_";
             for (const name in stats) {
-                if (!name.startsWith(prefixDash) && !name.startsWith(prefixUnderscore)) {
+                const c = stats[name];
+                // Primary match: docker compose project label (works even when
+                // container_name overrides the default <project>-<svc>-<idx>).
+                // Fallback: legacy prefix matching for containers without a
+                // compose project label.
+                const matchesProject = c.ComposeProject && c.ComposeProject === stackName;
+                const matchesPrefix = !c.ComposeProject
+                    && (name.startsWith(prefixDash) || name.startsWith(prefixUnderscore) || name === stackName);
+                if (!matchesProject && !matchesPrefix) {
                     continue;
                 }
-                const c = stats[name];
                 count++;
                 cpu += this.parsePercent(c.CPUPerc);
                 memory += this.parseMemUsage(c.MemUsage);

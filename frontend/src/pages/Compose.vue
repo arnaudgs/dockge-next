@@ -488,10 +488,13 @@ export default {
             const prefixDash = stackName + "-";
             const prefixUnderscore = stackName + "_";
             for (const name in this.dockerStats) {
-                if (!name.startsWith(prefixDash) && !name.startsWith(prefixUnderscore)) {
+                const c = this.dockerStats[name];
+                const matchesProject = c.ComposeProject && c.ComposeProject === stackName;
+                const matchesPrefix = !c.ComposeProject
+                    && (name.startsWith(prefixDash) || name.startsWith(prefixUnderscore) || name === stackName);
+                if (!matchesProject && !matchesPrefix) {
                     continue;
                 }
-                const c = this.dockerStats[name];
                 count++;
                 const cpuStr = (c.CPUPerc || "").replace("%", "");
                 const cpuVal = parseFloat(cpuStr);

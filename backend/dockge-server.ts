@@ -665,19 +665,34 @@ export class DockgeServer {
         let stats = new Map<string, object>();
 
         try {
-            let res = await childProcessAsync.spawn("docker", [ "stats", "--format", "json", "--no-stream" ], {
-                encoding: "utf-8",
-            });
+            // 1. docker stats (CPU / mem / IO)
+            const [ statsRes, psRes ] = await Promise.all([
+                childProcessAsync.spawn("docker", [ "stats", "--format", "json", "--no-stream" ], { encoding: "utf-8" }),
+                // 2. docker ps to recover the compose project label for each running container
+                childProcessAsync.spawn("docker", [ "ps", "-a", "--format", "{{.Names}}\t{{.Label \"com.docker.compose.project\"}}" ], { encoding: "utf-8" }),
+            ]);
 
-            if (!res.stdout) {
+            const projectByName = new Map<string, string>();
+            if (psRes.stdout) {
+                for (const line of psRes.stdout.toString().split("\n")) {
+                    if (!line) {
+                        continue;
+                    }
+                    const [ name, project ] = line.split("\t");
+                    if (name && project) {
+                        projectByName.set(name, project);
+                    }
+                }
+            }
+
+            if (!statsRes.stdout) {
                 return stats;
             }
 
-            let lines = res.stdout?.toString().split("\n");
-
-            for (let line of lines) {
+            for (const line of statsRes.stdout.toString().split("\n")) {
                 try {
-                    let obj = JSON.parse(line);
+                    const obj = JSON.parse(line);
+                    obj.ComposeProject = projectByName.get(obj.Name) || "";
                     stats.set(obj.Name, obj);
                 } catch (e) {
                 }
