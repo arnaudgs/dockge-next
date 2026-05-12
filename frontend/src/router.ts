@@ -28,6 +28,22 @@ const routes = [
         component: Layout,
         children: [
             {
+                path: "/pm2",
+                component: PM2,
+                children: [
+                    {
+                        name: "PM2Home",
+                        path: "",
+                        component: PM2Home,
+                    },
+                    {
+                        name: "PM2Detail",
+                        path: ":name",
+                        component: PM2Detail,
+                    },
+                ],
+            },
+            {
                 path: "",
                 component: Dashboard,
                 children: [
@@ -71,22 +87,6 @@ const routes = [
                     {
                         path: "/console/:endpoint",
                         component: Console,
-                    },
-                    {
-                        path: "/pm2",
-                        component: PM2,
-                        children: [
-                            {
-                                name: "PM2Home",
-                                path: "",
-                                component: PM2Home,
-                            },
-                            {
-                                name: "PM2Detail",
-                                path: ":name",
-                                component: PM2Detail,
-                            },
-                        ],
                     },
                     {
                         path: "/settings",
