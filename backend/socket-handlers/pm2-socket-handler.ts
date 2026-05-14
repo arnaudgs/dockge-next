@@ -3,7 +3,7 @@ import { SocketHandler } from "../socket-handler.js";
 import { DockgeServer } from "../dockge-server";
 import { callbackError, callbackResult, checkLogin, DockgeSocket } from "../util-server";
 import { log } from "../log";
-import { detectGpus, getGpuStatsByPids, hasGpu } from "../gpu-stats";
+import { collectDescendantPids, detectGpus, getGpuStatsByPids, hasGpu, scanPidsByPm2Id } from "../gpu-stats";
 
 export interface PM2ProcessInfo {
     pmId : number;
@@ -78,11 +78,26 @@ function pm2List() : Promise<PM2ProcessInfo[]> {
             });
 
             if (hasGpu() && result.length > 0) {
+                // Build PID groups per pm_id by merging two sources:
+                //   1. /proc/<pid>/task/<tid>/children — fast tree walk for
+                //      processes that stayed attached to their PM2 parent.
+                //   2. /proc/*/environ pm_id match — catches detached forks
+                //      (ffmpeg spawned with `detached:true` / setsid) that
+                //      reparented to PID 1 but still inherit PM2 env.
+                const byPm2Id = scanPidsByPm2Id();
                 const groups = new Map<string, number[]>();
                 for (const proc of result) {
-                    if (proc.pid > 0) {
-                        groups.set(String(proc.pmId), [ proc.pid ]);
+                    if (proc.pid <= 0) {
+                        continue;
                     }
+                    const merged = new Set<number>(collectDescendantPids(proc.pid));
+                    const envPids = byPm2Id.get(String(proc.pmId));
+                    if (envPids) {
+                        for (const p of envPids) {
+                            merged.add(p);
+                        }
+                    }
+                    groups.set(String(proc.pmId), Array.from(merged));
                 }
                 const gpuStats = getGpuStatsByPids(groups);
                 for (const proc of result) {

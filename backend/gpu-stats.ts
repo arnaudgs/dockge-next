@@ -92,6 +92,99 @@ export function hasGpu() : boolean {
     return detectGpus().length > 0;
 }
 
+/**
+ * Group all PIDs on the host by the value of the `pm_id` env var injected by
+ * PM2. Detached children (`setsid` / `detached: true`) still inherit env, so
+ * this catches grandchildren like ffmpeg spawned by a PM2-managed Node app
+ * even after they lose their parent link to PM2's process tree.
+ *
+ * Returned map key is the `pm_id` string. PIDs without a `pm_id` env are
+ * skipped. One pass over /proc, so cheap enough to run every refresh tick.
+ */
+export function scanPidsByPm2Id() : Map<string, number[]> {
+    const result = new Map<string, number[]>();
+    let entries : string[];
+    try {
+        entries = fs.readdirSync("/proc");
+    } catch (e) {
+        return result;
+    }
+    for (const entry of entries) {
+        const pid = Number(entry);
+        if (!Number.isFinite(pid) || pid <= 0) {
+            continue;
+        }
+        let environ : string;
+        try {
+            environ = fs.readFileSync(`/proc/${pid}/environ`, "utf-8");
+        } catch (e) {
+            // Permission denied (other users' processes) or PID just exited.
+            continue;
+        }
+        // env is NUL-separated; bail early if no PM2 markers to avoid splitting.
+        if (!environ.includes("pm_id=")) {
+            continue;
+        }
+        let pmId : string | null = null;
+        for (const piece of environ.split("\0")) {
+            if (piece.startsWith("pm_id=")) {
+                pmId = piece.slice(6);
+                break;
+            }
+        }
+        if (pmId === null) {
+            continue;
+        }
+        let list = result.get(pmId);
+        if (!list) {
+            list = [];
+            result.set(pmId, list);
+        }
+        list.push(pid);
+    }
+    return result;
+}
+
+/**
+ * BFS walk of `/proc/<pid>/task/<tid>/children` to collect a process and all
+ * its descendants. Bounded by `maxPids` to keep cost predictable when a tree
+ * has thousands of forks. Returns at least `[rootPid]` if the root is alive.
+ */
+export function collectDescendantPids(rootPid : number, maxPids = 512) : number[] {
+    const result = new Set<number>();
+    const queue : number[] = [ rootPid ];
+    while (queue.length > 0 && result.size < maxPids) {
+        const pid = queue.shift() as number;
+        if (result.has(pid)) {
+            continue;
+        }
+        result.add(pid);
+        let tids : string[];
+        try {
+            tids = fs.readdirSync(`/proc/${pid}/task`);
+        } catch (e) {
+            continue;
+        }
+        for (const tid of tids) {
+            try {
+                const childrenStr = fs.readFileSync(`/proc/${pid}/task/${tid}/children`, "utf-8").trim();
+                if (!childrenStr) {
+                    continue;
+                }
+                for (const token of childrenStr.split(/\s+/)) {
+                    const n = Number(token);
+                    if (Number.isFinite(n) && n > 0 && !result.has(n)) {
+                        queue.push(n);
+                    }
+                }
+            } catch (e) {
+                // tid disappeared between readdir and read — ignore
+            }
+        }
+    }
+    return Array.from(result);
+}
+
 interface RawSample {
     engineNs : bigint;
     vramKb : number;
