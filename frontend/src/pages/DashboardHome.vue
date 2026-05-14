@@ -106,6 +106,18 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Stacks overview table (with GPU column when host has a GPU) -->
+            <div class="d-flex align-items-center mt-2 mb-3">
+                <h2 class="mb-0 me-2">
+                    <font-awesome-icon icon="layer-group" class="me-2" />
+                    {{ $t("stacksOverview") }}
+                </h2>
+                <span v-if="overviewTotals.hasGpu" class="badge bg-gpu ms-1">
+                    GPU · {{ overviewTotals.totalGpuPercent.toFixed(1) }}% · {{ overviewTotals.totalGpuVram }} MB
+                </span>
+            </div>
+            <StacksOverviewTable @stats="overviewTotals = $event" />
         </div>
     </transition>
     <router-view ref="child" />
@@ -113,10 +125,11 @@
 
 <script>
 import { statusNameShort } from "../../../common/util-common";
+import StacksOverviewTable from "../components/StacksOverviewTable.vue";
 
 export default {
     components: {
-
+        StacksOverviewTable,
     },
     props: {
         calculatedHeight: {
@@ -146,7 +159,18 @@ export default {
                 password: "",
                 name: "",
                 updatedName: "",
-            }
+            },
+            overviewTotals: {
+                runningCount: 0,
+                totalContainers: 0,
+                totalCpu: 0,
+                totalMemory: 0,
+                totalGpuPercent: 0,
+                totalGpuVram: 0,
+                totalStacks: 0,
+                hasGpu: false,
+                gpuCards: [],
+            },
         };
     },
 
@@ -377,6 +401,13 @@ table {
     a {
         text-decoration: none;
     }
+}
+
+.bg-gpu {
+    background-color: #ff5e62 !important;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
 }
 
 </style>
