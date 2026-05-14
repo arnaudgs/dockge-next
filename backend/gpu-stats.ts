@@ -310,8 +310,12 @@ function nowNs() : bigint {
  * Aggregate GPU stats for groups of PIDs. The map key is opaque (stack name,
  * container id, pm2 pmId...) and the returned map keeps the same key.
  *
- * Percent is computed as `delta_engine_ns / delta_wall_ns * 100`, summed across
- * the group's PIDs, then capped at 100 * cardCount. First call returns 0%.
+ * Percent is computed as `delta_engine_ns / delta_wall_ns * 100`, summed
+ * across the group's PIDs and across every DRM engine (gfx, compute, enc,
+ * dec, ...). Each engine is an independent execution unit, so a single
+ * process maxing both the gfx and decode engines reports ~200 %, two
+ * processes each saturating the decode engine report ~200 %, etc.
+ * No upper cap — matches what btop / nvtop display. First call returns 0%.
  */
 export function getGpuStatsByPids(groups : Map<string, number[]>) : Map<string, GpuStat> {
     const result = new Map<string, GpuStat>();
@@ -360,9 +364,10 @@ export function getGpuStatsByPids(groups : Map<string, number[]>) : Map<string, 
             const wallDelta = sampleTs - prevTs;
             const engineDelta = groupEngineNs - prevEngineNs;
             if (wallDelta > 0n && engineDelta > 0n) {
-                // Convert via Number after scaling to avoid overflow.
-                const pct = Number(engineDelta * 10000n / wallDelta) / 100;
-                percent = Math.min(pct, 100);
+                // BigInt scaling avoids overflow on long deltas. No upper cap:
+                // multiple engines (and multiple PIDs) can legitimately sum
+                // past 100 %.
+                percent = Number(engineDelta * 10000n / wallDelta) / 100;
             }
         }
 
