@@ -25,14 +25,6 @@
                             </div>
                         </div>
                     </div>
-
-                    <!-- Docker Run -->
-                    <h2 class="mb-3">{{ $t("Docker Run") }}</h2>
-                    <div class="mb-3">
-                        <textarea id="name" v-model="dockerRunCommand" type="text" class="form-control docker-run shadow-box" required placeholder="docker run ..."></textarea>
-                    </div>
-
-                    <button class="btn-normal btn mb-4" @click="convertDockerRun">{{ $t("Convert to Compose") }}</button>
                 </div>
                 <!-- Right -->
                 <div class="col-md-5">
@@ -148,7 +140,6 @@ export default {
             },
             importantHeartBeatListLength: 0,
             displayedRecords: [],
-            dockerRunCommand: "",
             showAgentForm: false,
             showRemoveAgentDialog: {},
             showEditAgentNameDialog: {},
@@ -268,23 +259,6 @@ export default {
             return num;
         },
 
-        convertDockerRun() {
-            if (this.dockerRunCommand.trim() === "docker run") {
-                throw new Error("Please enter a docker run command");
-            }
-
-            // composerize is working in dev, but after "vite build", it is not working
-            // So pass to backend to do the conversion
-            this.$root.getSocket().emit("composerize", this.dockerRunCommand, (res) => {
-                if (res.ok) {
-                    this.$root.composeTemplate = res.composeTemplate;
-                    this.$router.push("/compose");
-                } else {
-                    this.$root.toastRes(res);
-                }
-            });
-        },
-
         /**
          * Updates the displayed records when a new important heartbeat arrives.
          * @param {object} heartbeat - The heartbeat object received.
@@ -380,16 +354,6 @@ table {
         table-layout: fixed;
         overflow-wrap: break-word;
     }
-}
-
-.docker-run {
-    border: none;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 15px;
-}
-
-.first-row .shadow-box {
-
 }
 
 .remove-agent {
