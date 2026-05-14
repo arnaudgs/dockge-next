@@ -49,6 +49,9 @@
                                 <th class="text-end sortable" @click="sortBy('memory')">
                                     {{ $t("pm2Memory") }} <SortIcon :col="'memory'" :sort-key="sortKey" :sort-dir="sortDir" />
                                 </th>
+                                <th v-if="state.hasGpu" class="text-end sortable" @click="sortBy('gpuPercent')">
+                                    {{ $t("gpu") }} <SortIcon :col="'gpuPercent'" :sort-key="sortKey" :sort-dir="sortDir" />
+                                </th>
                                 <th class="text-end sortable" @click="sortBy('uptime')">
                                     {{ $t("pm2Uptime") }} <SortIcon :col="'uptime'" :sort-key="sortKey" :sort-dir="sortDir" />
                                 </th>
@@ -93,6 +96,14 @@
                                         <span class="metric-value">{{ formatMemory(p.memory) }}</span>
                                         <div class="metric-bar">
                                             <div class="metric-fill mem" :style="{ width: memoryPercent(p.memory) + '%' }"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td v-if="state.hasGpu" class="text-end">
+                                    <div class="metric-cell">
+                                        <span class="metric-value">{{ (p.gpuPercent || 0).toFixed(1) }}% · {{ p.gpuVramMb || 0 }}MB</span>
+                                        <div class="metric-bar">
+                                            <div class="metric-fill gpu" :style="{ width: Math.min(p.gpuPercent || 0, 100) + '%' }"></div>
                                         </div>
                                     </div>
                                 </td>
@@ -482,6 +493,10 @@ export default {
 
             &.mem {
                 background: linear-gradient(135deg, #86e6a9 0%, #74c2ff 100%);
+            }
+
+            &.gpu {
+                background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
             }
         }
     }

@@ -36,6 +36,14 @@
                     {{ stat.BlockIO }}
                 </div>
             </div>
+            <div v-if="hasGpuStat" class="stat">
+                <div class="stat-label">
+                    {{ $t('gpu') }}
+                </div>
+                <div>
+                    {{ (stat.GpuPerc || 0).toFixed(1) }}% · {{ stat.GpuVramMB || 0 }}MB
+                </div>
+            </div>
         </div>
     </div>
 </template>
@@ -47,6 +55,11 @@ export default {
             type: Object,
             required: true
         }
+    },
+    computed: {
+        hasGpuStat() {
+            return this.stat && (this.stat.GpuVramMB !== undefined || this.stat.GpuPerc !== undefined);
+        },
     },
 };
 </script>

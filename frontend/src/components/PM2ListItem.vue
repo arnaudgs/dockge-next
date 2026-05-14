@@ -7,6 +7,9 @@
         </div>
         <div class="metrics text-end pm2-mono">
             <div>{{ process.cpu }}% · {{ formattedMemory }}</div>
+            <div v-if="hasGpuMetric" class="gpu-metric">
+                <font-awesome-icon icon="microchip" class="me-1" />{{ (process.gpuPercent || 0).toFixed(1) }}% · {{ process.gpuVramMb || 0 }}MB
+            </div>
         </div>
     </router-link>
 </template>
@@ -22,6 +25,9 @@ export default {
     computed: {
         isSelf() {
             return this.process.name === "dockge";
+        },
+        hasGpuMetric() {
+            return (this.process.gpuVramMb || 0) > 0 || (this.process.gpuPercent || 0) > 0;
         },
         statusClass() {
             switch (this.process.status) {
@@ -135,6 +141,11 @@ export default {
         font-size: 11px;
         color: #6c757d;
         flex-shrink: 0;
+
+        .gpu-metric {
+            color: #d6534f;
+            margin-top: 2px;
+        }
     }
 }
 

@@ -3,6 +3,7 @@ import { SocketHandler } from "../socket-handler.js";
 import { DockgeServer } from "../dockge-server";
 import { callbackError, callbackResult, checkLogin, DockgeSocket } from "../util-server";
 import { log } from "../log";
+import { detectGpus, getGpuStatsByPids, hasGpu } from "../gpu-stats";
 
 export interface PM2ProcessInfo {
     pmId : number;
@@ -20,6 +21,9 @@ export interface PM2ProcessInfo {
     user : string | null;
     cwd : string | null;
     scriptPath : string | null;
+    gpuVramMb : number;
+    gpuGttMb : number;
+    gpuPercent : number;
 }
 
 function pm2Connect() : Promise<void> {
@@ -67,8 +71,30 @@ function pm2List() : Promise<PM2ProcessInfo[]> {
                     user: (env.username as string) ?? null,
                     cwd: (env.pm_cwd as string) ?? null,
                     scriptPath: (env.pm_exec_path as string) ?? null,
+                    gpuVramMb: 0,
+                    gpuGttMb: 0,
+                    gpuPercent: 0,
                 };
             });
+
+            if (hasGpu() && result.length > 0) {
+                const groups = new Map<string, number[]>();
+                for (const proc of result) {
+                    if (proc.pid > 0) {
+                        groups.set(String(proc.pmId), [ proc.pid ]);
+                    }
+                }
+                const gpuStats = getGpuStatsByPids(groups);
+                for (const proc of result) {
+                    const g = gpuStats.get(String(proc.pmId));
+                    if (g) {
+                        proc.gpuVramMb = g.vramMb;
+                        proc.gpuGttMb = g.gttMb;
+                        proc.gpuPercent = g.percent;
+                    }
+                }
+            }
+
             resolve(result);
         });
     });
@@ -122,6 +148,8 @@ export class PM2SocketHandler extends SocketHandler {
                 callbackResult({
                     ok: true,
                     list,
+                    hasGpu: hasGpu(),
+                    gpuCards: detectGpus(),
                 }, callback);
             } catch (e) {
                 log.warn("pm2", "pm2List failed: " + (e instanceof Error ? e.message : String(e)));

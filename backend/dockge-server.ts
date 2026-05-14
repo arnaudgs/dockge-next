@@ -40,6 +40,7 @@ import { ManageAgentSocketHandler } from "./socket-handlers/manage-agent-socket-
 import { Terminal } from "./terminal";
 import { ImageUpdateChecker, ImageUpdateInfo } from "./image-update-checker";
 import { UpdateManager } from "./update-manager";
+import { getGpuStatsByPids, hasGpu } from "./gpu-stats";
 import { UPDATE_CHECK_CRON, UPDATE_CHECK_INITIAL_DELAY } from "../common/util-common";
 
 export class DockgeServer {
@@ -698,10 +699,52 @@ export class DockgeServer {
                 }
             }
 
+            if (hasGpu() && stats.size > 0) {
+                await this.injectGpuStats(stats);
+            }
+
             return stats;
         } catch (e) {
             log.error("getDockerStats", e);
             return stats;
+        }
+    }
+
+    /**
+     * Resolve host PIDs for each running container via `docker top` and join
+     * DRM fdinfo-based GPU stats into the per-container objects.
+     */
+    private async injectGpuStats(stats : Map<string, object>) : Promise<void> {
+        const names = Array.from(stats.keys());
+        const pidLookups = await Promise.all(names.map(async (name) => {
+            try {
+                const res = await childProcessAsync.spawn("docker", [ "top", name, "-eo", "pid" ], { encoding: "utf-8" });
+                if (!res.stdout) {
+                    return [ name, [] ] as [string, number[]];
+                }
+                const lines = res.stdout.toString().split("\n").map((l) => l.trim()).filter(Boolean);
+                // First line is the "PID" header.
+                const pids = lines.slice(1).map((l) => Number(l)).filter((n) => Number.isFinite(n) && n > 0);
+                return [ name, pids ] as [string, number[]];
+            } catch (e) {
+                return [ name, [] ] as [string, number[]];
+            }
+        }));
+
+        const groups = new Map<string, number[]>();
+        for (const [ name, pids ] of pidLookups) {
+            groups.set(name, pids);
+        }
+
+        const gpuStats = getGpuStatsByPids(groups);
+        for (const [ name, gpu ] of gpuStats) {
+            const obj = stats.get(name) as Record<string, unknown> | undefined;
+            if (!obj) {
+                continue;
+            }
+            obj.GpuVramMB = gpu.vramMb;
+            obj.GpuGttMB = gpu.gttMb;
+            obj.GpuPerc = gpu.percent;
         }
     }
 

@@ -35,6 +35,8 @@ const pm2State = reactive({
     loading: false,
     error: "",
     autoRefresh: true,
+    hasGpu: false,
+    gpuCards: [],
 });
 
 const REFRESH_INTERVAL_MS = 3000;
@@ -96,6 +98,8 @@ export default {
                 if (res && res.ok && Array.isArray(res.list)) {
                     pm2State.list = res.list;
                     pm2State.error = "";
+                    pm2State.hasGpu = !!res.hasGpu;
+                    pm2State.gpuCards = res.gpuCards || [];
                 } else {
                     pm2State.error = (res && res.msg) ? res.msg : "PM2 unavailable";
                 }

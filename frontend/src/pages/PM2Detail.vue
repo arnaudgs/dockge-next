@@ -85,6 +85,37 @@
                 </div>
             </div>
 
+            <div v-if="pm2State.hasGpu" class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("gpuUsage") }}</div>
+                        <div class="stat-value">{{ (process.gpuPercent || 0).toFixed(1) }}<span class="stat-unit">%</span></div>
+                        <div class="metric-bar mt-2">
+                            <div class="metric-fill gpu" :style="{ width: Math.min(process.gpuPercent || 0, 100) + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("gpuMemory") }}</div>
+                        <div class="stat-value">{{ process.gpuVramMb || 0 }}<span class="stat-unit">MB</span></div>
+                        <div v-if="(process.gpuGttMb || 0) > 0" class="small text-muted mt-1">
+                            GTT : {{ process.gpuGttMb }} MB
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("gpuCards") }}</div>
+                        <div class="stat-value-sm">
+                            <span v-for="(c, i) in pm2State.gpuCards" :key="i" class="gpu-card-chip">
+                                {{ c.vendor }}<span v-if="c.pciId" class="text-muted"> · {{ c.pciId }}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="shadow-box big-padding">
                 <h5 class="mb-3">{{ $t("pm2ProcessInfo") }}</h5>
                 <dl class="row pm2-info">
@@ -369,7 +400,34 @@ export default {
         &.mem {
             background: linear-gradient(135deg, #86e6a9 0%, #74c2ff 100%);
         }
+
+        &.gpu {
+            background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+        }
     }
+}
+
+.stat-value-sm {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111;
+    line-height: 1.2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+
+    .dark & {
+        color: $dark-font-color;
+    }
+}
+
+.gpu-card-chip {
+    background-color: rgba(255, 94, 98, 0.1);
+    color: #d6534f;
+    padding: 2px 10px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 500;
 }
 
 .pm2-info {

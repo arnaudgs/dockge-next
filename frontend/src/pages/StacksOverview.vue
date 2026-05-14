@@ -37,6 +37,31 @@
                 </div>
             </div>
 
+            <div v-if="hasGpu" class="row g-3 mb-4">
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("gpuUsage") }}</div>
+                        <div class="stat-value">{{ totalGpuPercent.toFixed(1) }}<span class="stat-unit">%</span></div>
+                    </div>
+                </div>
+                <div class="col-6 col-md-3">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("gpuMemory") }}</div>
+                        <div class="stat-value">{{ totalGpuVram }}<span class="stat-unit">MB</span></div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6">
+                    <div class="shadow-box big-padding stat-card">
+                        <div class="stat-label">{{ $t("gpuCards") }}</div>
+                        <div class="stat-value-sm">
+                            <span v-for="(c, i) in gpuCards" :key="i" class="gpu-card-chip">
+                                {{ c.vendor }}<span v-if="c.pciId" class="text-muted"> · {{ c.pciId }}</span>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
                 <button class="btn btn-normal" :disabled="loading" @click="refresh">
                     <font-awesome-icon icon="sync" :spin="loading" class="me-1" />
@@ -73,6 +98,9 @@
                                 </th>
                                 <th class="text-end sortable" @click="sortBy('memory')">
                                     {{ $t("memory") }} <SortIcon :col="'memory'" :sort-key="sortKey" :sort-dir="sortDir" />
+                                </th>
+                                <th v-if="hasGpu" class="text-end sortable" @click="sortBy('gpuPercent')">
+                                    {{ $t("gpu") }} <SortIcon :col="'gpuPercent'" :sort-key="sortKey" :sort-dir="sortDir" />
                                 </th>
                                 <th v-if="$root.agentCount > 1" class="sortable" @click="sortBy('endpoint')">
                                     {{ $t("endpoint") }} <SortIcon :col="'endpoint'" :sort-key="sortKey" :sort-dir="sortDir" />
@@ -115,6 +143,14 @@
                                         <span class="metric-value">{{ formatBytes(row.memory) }}</span>
                                         <div class="metric-bar">
                                             <div class="metric-fill mem" :style="{ width: memoryPercent(row.memory) + '%' }"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td v-if="hasGpu" class="text-end">
+                                    <div class="metric-cell">
+                                        <span class="metric-value">{{ row.gpuPercent.toFixed(1) }}% · {{ row.gpuVramMb }}MB</span>
+                                        <div class="metric-bar">
+                                            <div class="metric-fill gpu" :style="{ width: Math.min(row.gpuPercent, 100) + '%' }"></div>
                                         </div>
                                     </div>
                                 </td>
@@ -189,6 +225,8 @@ export default {
             runningOnly: false,
             busy: {},
             statsTimer: null,
+            hasGpu: false,
+            gpuCards: [],
         };
     },
     computed: {
@@ -214,6 +252,8 @@ export default {
                     containers: stats.count,
                     cpu: stats.cpu,
                     memory: stats.memory,
+                    gpuPercent: stats.gpuPercent,
+                    gpuVramMb: stats.gpuVramMb,
                 });
             }
             return list;
@@ -265,6 +305,12 @@ export default {
         totalMemoryUnit() {
             return this.splitBytes(this.totalMemory).unit;
         },
+        totalGpuPercent() {
+            return this.stacks.reduce((sum, s) => sum + (s.gpuPercent || 0), 0);
+        },
+        totalGpuVram() {
+            return this.stacks.reduce((sum, s) => sum + (s.gpuVramMb || 0), 0);
+        },
     },
     mounted() {
         this.refresh();
@@ -292,6 +338,10 @@ export default {
                 this.$root.emitAgent(ep, "dockerStats", (res) => {
                     if (res && res.ok && res.dockerStats) {
                         this.statsByEndpoint[ep] = res.dockerStats;
+                        if (ep === "") {
+                            this.hasGpu = !!res.hasGpu;
+                            this.gpuCards = res.gpuCards || [];
+                        }
                     }
                     if (--pending === 0) {
                         this.loading = false;
@@ -307,6 +357,8 @@ export default {
             let cpu = 0;
             let memory = 0;
             let count = 0;
+            let gpuPercent = 0;
+            let gpuVramMb = 0;
             const prefixDash = stackName + "-";
             const prefixUnderscore = stackName + "_";
             for (const name in stats) {
@@ -324,8 +376,10 @@ export default {
                 count++;
                 cpu += this.parsePercent(c.CPUPerc);
                 memory += this.parseMemUsage(c.MemUsage);
+                gpuPercent += Number(c.GpuPerc) || 0;
+                gpuVramMb += Number(c.GpuVramMB) || 0;
             }
-            return { cpu, memory, count };
+            return { cpu, memory, count, gpuPercent, gpuVramMb };
         },
         parsePercent(str) {
             if (!str || typeof str !== "string") {
@@ -600,8 +654,31 @@ export default {
             &.mem {
                 background: linear-gradient(135deg, #86e6a9 0%, #74c2ff 100%);
             }
+
+            &.gpu {
+                background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%);
+            }
         }
     }
+}
+
+.stat-value-sm {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #111;
+    line-height: 1.2;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.gpu-card-chip {
+    background-color: rgba(255, 94, 98, 0.1);
+    color: #d6534f;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 500;
 }
 
 .action-cell {

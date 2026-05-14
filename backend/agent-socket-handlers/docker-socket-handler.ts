@@ -4,6 +4,7 @@ import { callbackError, callbackResult, checkLogin, DockgeSocket, ValidationErro
 import { Stack } from "../stack";
 import { AgentSocket } from "../../common/agent-socket";
 import { ImageUpdateChecker } from "../image-update-checker";
+import { detectGpus, hasGpu } from "../gpu-stats";
 
 export class DockerSocketHandler extends AgentSocketHandler {
     create(socket : DockgeSocket, server : DockgeServer, agentSocket : AgentSocket) {
@@ -306,6 +307,8 @@ export class DockerSocketHandler extends AgentSocketHandler {
                 callbackResult({
                     ok: true,
                     dockerStats,
+                    hasGpu: hasGpu(),
+                    gpuCards: detectGpus(),
                 }, callback);
                 server.sendStackList();
             } catch (e) {
