@@ -11,7 +11,7 @@
                 <select v-model="sortKey" class="form-select form-select-sm sort-key-select">
                     <option value="name">{{ $t("Name") }}</option>
                     <option value="status">{{ $t("Status") }}</option>
-                    <option value="containers">{{ $t("Container | Containers") }}</option>
+                    <option value="containers">{{ $t("containers") }}</option>
                     <option value="cpu">{{ $t("CPU") }}</option>
                     <option value="memory">{{ $t("memory") }}</option>
                     <option v-if="hasGpu" value="gpuPercent">{{ $t("gpu") }}</option>
@@ -63,7 +63,7 @@
 
                 <div class="stack-card-metrics">
                     <div class="metric-tile">
-                        <div class="metric-tile-label">{{ $t("Container | Containers") }}</div>
+                        <div class="metric-tile-label">{{ $t("containers") }}</div>
                         <div class="metric-tile-value stat-mono">{{ row.containers || "—" }}</div>
                     </div>
                     <div class="metric-tile">
@@ -132,7 +132,7 @@
                                 {{ $t("Status") }} <SortIcon :col="'status'" :sort-key="sortKey" :sort-dir="sortDir" />
                             </th>
                             <th class="text-end sortable" @click="sortBy('containers')">
-                                {{ $t("Container | Containers") }} <SortIcon :col="'containers'" :sort-key="sortKey" :sort-dir="sortDir" />
+                                {{ $t("containers") }} <SortIcon :col="'containers'" :sort-key="sortKey" :sort-dir="sortDir" />
                             </th>
                             <th class="text-end sortable" @click="sortBy('cpu')">
                                 {{ $t("CPU") }} <SortIcon :col="'cpu'" :sort-key="sortKey" :sort-dir="sortDir" />

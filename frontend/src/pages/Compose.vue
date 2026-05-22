@@ -70,7 +70,7 @@
             <div v-if="!isAdd && !isEditMode && aggregateStats.containers > 0" class="row g-3 mb-3 stack-stats-strip">
                 <div class="col-6 col-md-3">
                     <div class="shadow-box big-padding stat-card">
-                        <div class="stat-label">{{ $t("Container | Containers") }}</div>
+                        <div class="stat-label">{{ $t("containers") }}</div>
                         <div class="stat-value stat-mono">{{ aggregateStats.containers }}</div>
                     </div>
                 </div>

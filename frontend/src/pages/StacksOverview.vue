@@ -19,7 +19,7 @@
                 </div>
                 <div class="col-6 col-md-3">
                     <div class="shadow-box big-padding stat-card">
-                        <div class="stat-label">{{ $t("Container | Containers") }}</div>
+                        <div class="stat-label">{{ $t("containers") }}</div>
                         <div class="stat-value stat-mono">{{ totals.totalContainers }}</div>
                     </div>
                 </div>
