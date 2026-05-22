@@ -9,8 +9,8 @@
                 </span>
             </h1>
 
-            <div v-if="stack.isManagedByDockge" class="mb-3">
-                <div class="btn-group me-2" role="group">
+            <div v-if="stack.isManagedByDockge" class="mb-3 stack-actions-wrap d-flex flex-wrap gap-2 align-items-start">
+                <div class="btn-group stack-actions" role="group">
                     <button v-if="isEditMode" class="btn btn-primary" :disabled="processing" @click="deployStack">
                         <font-awesome-icon icon="rocket" class="me-1" />
                         {{ $t("deployStack") }}
@@ -1128,24 +1128,55 @@ export default {
     height: 315px;
 }
 
-@media (max-width: 768px) {
-    .btn-group {
+@media (max-width: 767.98px) {
+    .stack-actions-wrap {
         display: flex;
-        flex-wrap: wrap;
-        gap: 4px;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .stack-actions {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 6px;
+        width: 100%;
+        margin-right: 0 !important;
 
         .btn {
-            font-size: 13px;
-            padding: 6px 10px;
+            font-size: 0.85rem;
+            padding: 8px 10px;
+            border-radius: 8px !important;
+            min-height: 40px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
         }
     }
 
+    .stack-actions-wrap > .btn {
+        flex: 1 1 100%;
+        min-height: 40px;
+        font-size: 0.85rem;
+    }
+
+    .stack-actions {
+        flex: 1 1 100%;
+    }
+
     .terminal {
-        height: 160px;
+        height: 32vh;
+        min-height: 160px;
     }
 
     .combined-terminal {
-        height: 200px;
+        height: 38vh;
+        min-height: 200px;
+    }
+
+    .stack-stats-strip {
+        .stat-value {
+            font-size: 1.25rem;
+        }
     }
 }
 

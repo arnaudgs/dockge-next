@@ -417,6 +417,27 @@ export default defineComponent({
         width: 100%;
         align-items: center;
         justify-content: end;
+
+        @media (max-width: 575.98px) {
+            justify-content: flex-start;
+            margin-top: 8px;
+
+            .btn-group {
+                width: 100%;
+                margin-right: 0 !important;
+                flex-wrap: wrap;
+                gap: 4px;
+
+                .btn {
+                    flex: 1 1 0;
+                    min-width: 0;
+                    border-radius: 8px !important;
+                    font-size: 0.85rem;
+                    padding: 8px 6px;
+                    min-height: 40px;
+                }
+            }
+        }
     }
 
     .stats {

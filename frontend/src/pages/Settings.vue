@@ -6,7 +6,7 @@
 
         <div class="shadow-box shadow-box-settings">
             <div class="row">
-                <div v-if="showSubMenu" class="settings-menu col-4 col-lg-3 col-md-5">
+                <div v-if="showSubMenu" class="settings-menu col-12 col-md-5 col-lg-3">
                     <router-link
                         v-for="(item, key) in subMenus"
                         :key="key"
@@ -25,7 +25,7 @@
                         </div>
                     </a>
                 </div>
-                <div class="settings-content col-8 col-lg-9 col-md-7">
+                <div class="settings-content col-12 col-md-7 col-lg-9">
                     <div v-if="currentPage" class="settings-content-header">
                         {{ subMenus[currentPage].title }}
                     </div>
@@ -249,29 +249,76 @@ footer {
     color: $danger !important;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767.98px) {
     .shadow-box-settings {
         padding: 10px;
         min-height: auto;
     }
 
-    .settings-menu .menu-item {
-        margin: 0.3em;
-        padding: 0.5em 0.6em;
-        font-size: 13px;
+    .settings-menu {
+        display: flex;
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        gap: 4px;
+        padding: 4px 2px 8px;
+        margin-bottom: 8px;
+        border-bottom: 1px solid #dee2e6;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch;
+
+        .dark & {
+            border-bottom-color: $dark-border-color;
+        }
+
+        // hide the scrollbar visually but keep it scrollable
+        &::-webkit-scrollbar {
+            height: 3px;
+        }
+
+        a {
+            flex: 0 0 auto;
+        }
+
+        .menu-item {
+            margin: 0;
+            padding: 0.45em 0.85em;
+            font-size: 13px;
+            white-space: nowrap;
+            border-radius: 999px;
+            background-color: rgba(0, 0, 0, 0.04);
+
+            .dark & {
+                background-color: rgba(255, 255, 255, 0.04);
+            }
+        }
+
+        .active .menu-item {
+            background: $primary-gradient;
+            color: white;
+            border-left: 0;
+            border-radius: 999px;
+
+            .dark & {
+                background: $primary-gradient;
+                color: $dark-font-color2;
+            }
+        }
+
+        .logout .menu-item {
+            background-color: rgba(220, 53, 69, 0.1);
+        }
     }
 
-    .settings-content .settings-content-header {
-        font-size: 20px;
-        padding: 10px 0.6em;
-        margin-top: -10px;
-        margin-right: -10px;
-        width: calc(100% + 10px);
+    .settings-content {
+        .settings-content-header {
+            display: none;
+        }
     }
 
     .settings-content .mx-3 {
-        margin-left: 0.5rem !important;
-        margin-right: 0.5rem !important;
+        margin-left: 0.25rem !important;
+        margin-right: 0.25rem !important;
     }
 }
 </style>

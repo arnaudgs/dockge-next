@@ -1,10 +1,29 @@
 <template>
     <div>
-        <div class="mb-3 d-flex flex-wrap align-items-center gap-2">
+        <div class="mb-3 d-flex flex-wrap align-items-center gap-2 toolbar">
             <button class="btn btn-normal" :disabled="loading" @click="refresh">
                 <font-awesome-icon icon="sync" :spin="loading" class="me-1" />
                 {{ $t("Refresh") }}
             </button>
+
+            <!-- Mobile-only compact sort selector -->
+            <div v-if="$root.isMobile" class="mobile-sort">
+                <select v-model="sortKey" class="form-select form-select-sm sort-key-select">
+                    <option value="name">{{ $t("Name") }}</option>
+                    <option value="status">{{ $t("Status") }}</option>
+                    <option value="containers">{{ $t("Container | Containers") }}</option>
+                    <option value="cpu">{{ $t("CPU") }}</option>
+                    <option value="memory">{{ $t("memory") }}</option>
+                    <option v-if="hasGpu" value="gpuPercent">{{ $t("gpu") }}</option>
+                </select>
+                <button
+                    class="btn btn-outline-normal btn-sm sort-dir-btn"
+                    :title="sortDir"
+                    @click="sortDir = sortDir === 'asc' ? 'desc' : 'asc'"
+                >
+                    {{ sortDir === "asc" ? "↑" : "↓" }}
+                </button>
+            </div>
 
             <label class="form-check form-switch mb-0 ms-auto">
                 <input v-model="runningOnly" class="form-check-input" type="checkbox" />
@@ -15,6 +34,90 @@
         <div v-if="filteredStacks.length === 0" class="shadow-box big-padding text-center no-stacks">
             <font-awesome-icon icon="check" class="me-2" />
             {{ runningOnly ? $t("stacksNoRunning") : $t("stacksNoneFound") }}
+        </div>
+
+        <!-- Mobile cards view -->
+        <div v-else-if="$root.isMobile" class="stacks-cards">
+            <div
+                v-for="row in sortedStacks"
+                :key="row.endpoint + '|' + row.name"
+                class="shadow-box stack-card"
+                @click="goToStack(row)"
+            >
+                <div class="stack-card-header">
+                    <div class="stack-card-title">
+                        <span class="stack-name">{{ row.name }}</span>
+                        <span v-if="row.hasUpdates" class="badge update-badge ms-2" :title="$t('updateAvailable')">
+                            <font-awesome-icon icon="circle-up" />
+                        </span>
+                    </div>
+                    <span class="stack-status" :class="`status-${row.statusName}`">
+                        <span class="status-dot"></span>
+                        {{ row.statusLabel }}
+                    </span>
+                </div>
+
+                <div v-if="$root.agentCount > 1 && row.endpoint" class="stack-card-endpoint">
+                    <font-awesome-icon icon="server" class="me-1" /> {{ row.endpoint }}
+                </div>
+
+                <div class="stack-card-metrics">
+                    <div class="metric-tile">
+                        <div class="metric-tile-label">{{ $t("Container | Containers") }}</div>
+                        <div class="metric-tile-value stat-mono">{{ row.containers || "—" }}</div>
+                    </div>
+                    <div class="metric-tile">
+                        <div class="metric-tile-label">{{ $t("CPU") }}</div>
+                        <div class="metric-tile-value">{{ row.cpu.toFixed(1) }}<span class="unit">%</span></div>
+                        <div class="metric-bar">
+                            <div class="metric-fill cpu" :style="{ width: Math.min(row.cpu, 100) + '%' }"></div>
+                        </div>
+                    </div>
+                    <div class="metric-tile">
+                        <div class="metric-tile-label">{{ $t("memory") }}</div>
+                        <div class="metric-tile-value">{{ formatBytes(row.memory) }}</div>
+                        <div class="metric-bar">
+                            <div class="metric-fill mem" :style="{ width: memoryPercent(row.memory) + '%' }"></div>
+                        </div>
+                    </div>
+                    <div v-if="hasGpu" class="metric-tile">
+                        <div class="metric-tile-label">{{ $t("gpu") }}</div>
+                        <div class="metric-tile-value">{{ row.gpuPercent.toFixed(1) }}<span class="unit">%</span> · {{ row.gpuVramMb }}<span class="unit">MB</span></div>
+                        <div class="metric-bar">
+                            <div class="metric-fill gpu" :style="{ width: Math.min(row.gpuPercent, 100) + '%' }"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="stack-card-actions" @click.stop>
+                    <button
+                        class="btn btn-sm btn-outline-normal mobile-action-btn"
+                        :disabled="busy[row.key] || !row.isRunning"
+                        @click="onAction(row, 'restartStack')"
+                    >
+                        <font-awesome-icon icon="sync" :spin="busy[row.key] === 'restartStack'" class="me-1" />
+                        {{ $t("Restart") }}
+                    </button>
+                    <button
+                        v-if="row.isRunning"
+                        class="btn btn-sm btn-outline-normal mobile-action-btn action-btn-danger"
+                        :disabled="!!busy[row.key]"
+                        @click="onAction(row, 'stopStack')"
+                    >
+                        <font-awesome-icon icon="stop" class="me-1" />
+                        {{ $t("Stop") }}
+                    </button>
+                    <button
+                        v-else
+                        class="btn btn-sm btn-outline-normal mobile-action-btn action-btn-success"
+                        :disabled="!!busy[row.key]"
+                        @click="onAction(row, 'startStack')"
+                    >
+                        <font-awesome-icon icon="play" class="me-1" />
+                        {{ $t("Start") }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div v-else class="shadow-box stacks-table-box">
@@ -395,6 +498,181 @@ export default {
 
 <style lang="scss" scoped>
 @import "../styles/vars.scss";
+
+.toolbar {
+    .mobile-sort {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+
+        .sort-key-select {
+            width: auto;
+            min-width: 110px;
+            font-size: 0.85rem;
+        }
+
+        .sort-dir-btn {
+            width: 34px;
+            padding: 4px 0;
+            font-weight: 600;
+        }
+    }
+}
+
+.stacks-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stack-card {
+    padding: 14px;
+    cursor: pointer;
+    transition: transform 0.12s ease, background-color 0.15s ease;
+
+    &:active {
+        transform: scale(0.99);
+        background-color: rgba(116, 194, 255, 0.06);
+    }
+
+    .stack-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        gap: 8px;
+        margin-bottom: 8px;
+    }
+
+    .stack-card-title {
+        display: inline-flex;
+        align-items: center;
+        flex: 1 1 auto;
+        min-width: 0;
+
+        .stack-name {
+            font-weight: 600;
+            font-size: 1rem;
+            color: #111;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+    }
+
+    .stack-card-endpoint {
+        font-size: 0.78rem;
+        color: #6c757d;
+        margin-bottom: 8px;
+    }
+
+    .stack-card-metrics {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-bottom: 10px;
+
+        .metric-tile {
+            background-color: rgba(0, 0, 0, 0.025);
+            border-radius: 8px;
+            padding: 6px 10px;
+
+            .metric-tile-label {
+                font-size: 0.65rem;
+                font-weight: 600;
+                text-transform: uppercase;
+                letter-spacing: 0.04em;
+                color: #6c757d;
+                margin-bottom: 2px;
+            }
+
+            .metric-tile-value {
+                font-size: 0.95rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                color: #111;
+
+                .unit {
+                    font-size: 0.7rem;
+                    font-weight: 400;
+                    color: #6c757d;
+                    margin-left: 2px;
+                }
+            }
+
+            .metric-bar {
+                margin-top: 4px;
+                height: 3px;
+                background-color: rgba(0, 0, 0, 0.06);
+                border-radius: 2px;
+                overflow: hidden;
+
+                .metric-fill {
+                    height: 100%;
+                    transition: width 0.4s $easing-out;
+
+                    &.cpu { background: $primary-gradient; }
+                    &.mem { background: linear-gradient(135deg, #86e6a9 0%, #74c2ff 100%); }
+                    &.gpu { background: linear-gradient(135deg, #ff9966 0%, #ff5e62 100%); }
+                }
+            }
+        }
+    }
+
+    .stack-card-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+
+        .mobile-action-btn {
+            min-height: 44px;
+            font-size: 0.85rem;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+
+            &.action-btn-danger {
+                color: $danger;
+                border-color: rgba(220, 53, 69, 0.3);
+            }
+
+            &.action-btn-success {
+                color: #198754;
+                border-color: rgba(25, 135, 84, 0.3);
+            }
+        }
+    }
+}
+
+.dark .stack-card {
+    .stack-name {
+        color: $dark-font-color;
+    }
+
+    .stack-card-endpoint {
+        color: $dark-font-color3;
+    }
+
+    &:active {
+        background-color: rgba(116, 194, 255, 0.08);
+    }
+
+    .stack-card-metrics .metric-tile {
+        background-color: rgba(255, 255, 255, 0.03);
+
+        .metric-tile-label, .unit {
+            color: $dark-font-color3;
+        }
+
+        .metric-tile-value {
+            color: $dark-font-color;
+        }
+
+        .metric-bar {
+            background-color: rgba(255, 255, 255, 0.06);
+        }
+    }
+}
 
 .stat-mono {
     font-family: 'JetBrains Mono', monospace;

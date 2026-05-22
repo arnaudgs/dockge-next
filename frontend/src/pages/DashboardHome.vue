@@ -337,6 +337,28 @@ export default {
     &.exited {
         color: $danger;
     }
+
+    @media (max-width: 575.98px) {
+        font-size: 22px;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .shadow-box.big-padding {
+        padding: 12px 8px;
+
+        h3 {
+            font-size: 14px;
+        }
+
+        h4 {
+            font-size: 16px;
+        }
+    }
+
+    .first-row {
+        --bs-gutter-y: 0.75rem;
+    }
 }
 
 .shadow-box {

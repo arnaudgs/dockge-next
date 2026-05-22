@@ -284,6 +284,21 @@ export default {
     color: $primary !important;
 }
 
+h1 {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    min-width: 0;
+
+    @media (max-width: 575.98px) {
+        font-size: 1.25rem;
+        .pm2-status {
+            font-size: 0.85rem;
+            margin-left: 0 !important;
+            flex-basis: 100%;
+        }
+    }
+}
+
 .pm2-self-badge {
     background-color: $primary;
     color: white;

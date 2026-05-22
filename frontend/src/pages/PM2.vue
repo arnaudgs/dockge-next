@@ -140,6 +140,7 @@ export default {
     transform: translateX(-100%);
     transition: transform 0.3s ease-in-out;
     background-color: var(--bs-body-bg);
+    top: calc(52px + env(safe-area-inset-top));
     bottom: calc(60px + env(safe-area-inset-bottom));
 
     &.show {
@@ -149,6 +150,7 @@ export default {
 
 .offcanvas-backdrop {
     z-index: 1040;
+    top: calc(52px + env(safe-area-inset-top));
     bottom: calc(60px + env(safe-area-inset-bottom));
 }
 

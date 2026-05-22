@@ -109,6 +109,48 @@
             </ul>
         </header>
 
+        <!-- Mobile slim top bar -->
+        <header v-if="$root.isMobile && $root.loggedIn" class="mobile-topbar">
+            <button v-if="showBackButton" class="topbar-back" :title="$t('back') || 'Back'" @click="goBack">
+                <font-awesome-icon icon="angle-left" />
+            </button>
+            <router-link v-else :to="homeLink" class="topbar-logo">
+                <object class="bi" width="24" height="24" data="/icon.svg" />
+            </router-link>
+
+            <h1 class="topbar-title">{{ mobileTitle }}</h1>
+
+            <div class="dropdown topbar-profile">
+                <button class="profile-btn" data-bs-toggle="dropdown" aria-expanded="false">
+                    <div class="profile-pic">{{ $root.usernameFirstChar }}</div>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li>
+                        <i18n-t v-if="$root.username != null" tag="span" keypath="signedInDisp" class="dropdown-item-text">
+                            <strong>{{ $root.username }}</strong>
+                        </i18n-t>
+                        <span v-if="$root.username == null" class="dropdown-item-text">{{ $t("signedInDispDisabled") }}</span>
+                    </li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li v-if="!isPm2Mode">
+                        <button class="dropdown-item" @click="scanFolder">
+                            <font-awesome-icon icon="arrows-rotate" /> {{ $t("scanFolder") }}
+                        </button>
+                    </li>
+                    <li>
+                        <router-link to="/settings/general" class="dropdown-item">
+                            <font-awesome-icon icon="cog" /> {{ $t("Settings") }}
+                        </router-link>
+                    </li>
+                    <li v-if="$root.socketIO.token !== 'autoLogin'">
+                        <button class="dropdown-item" @click="$root.logout">
+                            <font-awesome-icon icon="sign-out-alt" /> {{ $t("Logout") }}
+                        </button>
+                    </li>
+                </ul>
+            </div>
+        </header>
+
         <main :class="{ 'mobile-main': $root.isMobile }">
             <div v-if="$root.socketIO.connecting" class="container mt-5">
                 <h4>{{ $t("connecting...") }}</h4>
@@ -224,6 +266,59 @@ export default {
             }
         },
 
+        mobileTitle() {
+            const route = this.$route;
+            const path = route.path;
+            const params = route.params || {};
+
+            if (path.startsWith("/compose/") && params.stackName) {
+                try {
+                    return decodeURIComponent(params.stackName);
+                } catch (e) {
+                    return params.stackName;
+                }
+            }
+            if (path === "/compose") {
+                return this.$t("compose");
+            }
+            if (path.startsWith("/pm2/") && params.name) {
+                try {
+                    return decodeURIComponent(params.name);
+                } catch (e) {
+                    return params.name;
+                }
+            }
+            if (path === "/pm2") {
+                return this.$t("pm2Overview");
+            }
+            if (path.startsWith("/terminal/")) {
+                return params.serviceName || this.$t("terminal");
+            }
+            if (path === "/console" || path.startsWith("/console/")) {
+                return this.$t("console");
+            }
+            if (path === "/updates") {
+                return this.$t("updates");
+            }
+            if (path === "/stacks") {
+                return this.$t("stacksOverview");
+            }
+            if (path.startsWith("/settings")) {
+                return this.$t("Settings");
+            }
+            if (path === "/") {
+                return this.$t("home");
+            }
+            return "Dockge";
+        },
+
+        showBackButton() {
+            const path = this.$route.path;
+            return path.startsWith("/compose")
+                || (path.startsWith("/pm2/") && path !== "/pm2")
+                || path.startsWith("/terminal/");
+        },
+
     },
 
     watch: {
@@ -243,6 +338,13 @@ export default {
             this.$root.emitAgent(ALL_ENDPOINTS, "requestStackList", (res) => {
                 this.$root.toastRes(res);
             });
+        },
+        goBack() {
+            if (window.history.length > 1) {
+                this.$router.back();
+            } else {
+                this.$router.push(this.homeLink);
+            }
         },
     },
 
@@ -298,13 +400,20 @@ export default {
         align-items: center;
         justify-content: center;
         height: 100%;
-        padding: 6px 4px 0;
+        padding: 6px 2px 0;
         font-size: 11px;
         color: #c1c1c1;
         overflow: hidden;
         text-decoration: none;
         cursor: pointer;
         line-height: 1.2;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+
+        @media (max-width: 380px) {
+            font-size: 10px;
+            padding: 6px 1px 0;
+        }
 
         &.router-link-exact-active, &.active {
             color: $primary;
@@ -345,7 +454,107 @@ main {
 
     &.mobile-main {
         min-height: 0;
+        padding-top: calc(52px + env(safe-area-inset-top));
         padding-bottom: calc(70px + env(safe-area-inset-bottom));
+    }
+}
+
+.mobile-topbar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 1055;
+    height: calc(52px + env(safe-area-inset-top));
+    padding: env(safe-area-inset-top) 10px 0;
+    background-color: #fff;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+
+    .dark & {
+        background-color: $dark-header-bg;
+        border-bottom-color: $dark-border-color;
+    }
+
+    .topbar-back, .topbar-logo, .profile-btn {
+        background: transparent;
+        border: 0;
+        padding: 6px 8px;
+        color: inherit;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        min-width: 36px;
+        min-height: 36px;
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    .topbar-back {
+        font-size: 22px;
+    }
+
+    .topbar-title {
+        flex: 1 1 auto;
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin: 0;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        min-width: 0;
+
+        .dark & {
+            color: $dark-font-color;
+        }
+    }
+
+    .topbar-profile {
+        .profile-pic {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            background-color: $primary;
+            width: 30px;
+            height: 30px;
+            border-radius: 50rem;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        .dropdown-menu {
+            transition: all 0.2s;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-top: 8px;
+
+            .dark & {
+                background-color: $dark-bg;
+                color: $dark-font-color;
+                border-color: $dark-border-color;
+
+                .dropdown-item {
+                    color: $dark-font-color;
+
+                    &:hover {
+                        background-color: $dark-bg2;
+                    }
+                }
+
+                .dropdown-item-text {
+                    color: $dark-font-color;
+                }
+            }
+
+            .dropdown-item {
+                padding: 0.6rem 1rem;
+            }
+        }
     }
 }
 
@@ -358,12 +567,13 @@ main {
 }
 
 .lost-connection {
-    padding: 5px;
+    padding: calc(5px + env(safe-area-inset-top)) 5px 5px;
     background-color: crimson;
     color: white;
     position: fixed;
     width: 100%;
     z-index: 99999;
+    top: 0;
 }
 
 .mode-switcher {
