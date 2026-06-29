@@ -320,7 +320,8 @@ import CodeMirror from "vue-codemirror6";
 import { yaml } from "@codemirror/lang-yaml";
 import { python } from "@codemirror/lang-python";
 import { dracula as editorTheme } from "thememirror";
-import { lineNumbers, EditorView } from "@codemirror/view";
+import { lineNumbers, EditorView, Decoration, ViewPlugin } from "@codemirror/view";
+import { RangeSetBuilder } from "@codemirror/state";
 import { parseDocument, Document } from "yaml";
 
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -354,6 +355,43 @@ let yamlErrorTimeout = null;
 let serviceStatusTimeout = null;
 let dockerStatsTimeout = null;
 
+// Surligne les variables d'environnement ($VAR et ${VAR}) dans l'éditeur
+const variableHighlight = ViewPlugin.fromClass(class {
+    constructor(view) {
+        this.decorations = this.buildDecorations(view);
+    }
+
+    update(update) {
+        if (update.docChanged || update.viewportChanged) {
+            this.decorations = this.buildDecorations(update.view);
+        }
+    }
+
+    buildDecorations(view) {
+        const builder = new RangeSetBuilder();
+
+        for (const { from, to } of view.visibleRanges) {
+            const text = view.state.doc.sliceString(from, to);
+            const variableRegex = /\$\{?[A-Za-z0-9_]+\}?/g;
+            let match;
+            while ((match = variableRegex.exec(text)) !== null) {
+                const start = from + match.index;
+                const end = start + match[0].length;
+
+                builder.add(
+                    start,
+                    end,
+                    Decoration.mark({ class: "cm-variable-highlight" })
+                );
+            }
+        }
+
+        return builder.finish();
+    }
+}, {
+    decorations: v => v.decorations
+});
+
 export default {
     components: {
         NetworkInput,
@@ -378,6 +416,7 @@ export default {
         const extensions = [
             editorTheme,
             yaml(),
+            variableHighlight,
             lineNumbers(),
             EditorView.focusChangeEffect.of(focusEffectHandler)
         ];
@@ -385,6 +424,7 @@ export default {
         const extensionsEnv = [
             editorTheme,
             python(),
+            variableHighlight,
             lineNumbers(),
             EditorView.focusChangeEffect.of(focusEffectHandler)
         ];
@@ -1112,6 +1152,11 @@ export default {
         background-color: #4ade80;
         box-shadow: 0 0 0 3px rgba(74, 222, 128, 0.12);
     }
+}
+
+:deep(.cm-variable-highlight) {
+    color: #fe6000;
+    font-weight: 600;
 }
 
 .editor-box {
