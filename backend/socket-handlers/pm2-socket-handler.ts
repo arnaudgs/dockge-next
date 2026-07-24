@@ -4,6 +4,7 @@ import { DockgeServer } from "../dockge-server";
 import { callbackError, callbackResult, checkLogin, DockgeSocket } from "../util-server";
 import { log } from "../log";
 import { collectDescendantPids, detectGpus, getGpuStatsByPids, hasGpu, scanPidsByPm2Id } from "../gpu-stats";
+import { getProcStats } from "../proc-stats";
 
 export interface PM2ProcessInfo {
     pmId : number;
@@ -76,6 +77,23 @@ function pm2List() : Promise<PM2ProcessInfo[]> {
                     gpuPercent: 0,
                 };
             });
+
+            // PM2's own `monit` (cpu/memory) goes stale and reports 0 for every
+            // process after a long God-daemon uptime. Read real figures from
+            // /proc so the UI keeps working regardless of the daemon's state.
+            const procStats = getProcStats(result.map((p) => p.pid));
+            for (const proc of result) {
+                const s = procStats.get(proc.pid);
+                if (!s) {
+                    continue;
+                }
+                if (s.memory > 0) {
+                    proc.memory = s.memory;
+                }
+                if (s.cpu !== null && (proc.cpu === 0 || s.cpu > 0)) {
+                    proc.cpu = s.cpu;
+                }
+            }
 
             if (hasGpu() && result.length > 0) {
                 // Build PID groups per pm_id by merging two sources:
