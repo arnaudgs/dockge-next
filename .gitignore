@@ -13,3 +13,8 @@ frontend-dist
 # Playwright MCP artifacts
 .playwright-mcp/
 
+# Captures d'écran de test (Playwright MCP) — jamais dans le dépôt
+/screenshots/
+# Filet de sécurité : aucun PNG lâché à la racine (les assets légitimes sont dans frontend/public/)
+/*.png
+
