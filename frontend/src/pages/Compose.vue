@@ -104,11 +104,20 @@
             </div>
 
             <!-- Update Details -->
-            <div v-if="hasUpdates && !isEditMode" class="shadow-box big-padding mb-3 update-details-panel">
-                <h5 class="mb-2">
-                    <font-awesome-icon icon="circle-up" class="me-1 update-icon" />
-                    {{ $t("availableUpdates") }}
-                </h5>
+            <div v-if="hasUpdates" class="shadow-box big-padding mb-3 update-details-panel">
+                <div class="d-flex align-items-center flex-wrap gap-2 mb-2">
+                    <h5 class="mb-0">
+                        <font-awesome-icon icon="circle-up" class="me-1 update-icon" />
+                        {{ $t("availableUpdates") }}
+                    </h5>
+                    <button
+                        v-if="isEditMode && pendingTagUpdates.length > 1"
+                        class="btn btn-sm btn-primary ms-auto"
+                        @click="applyAllTagUpdates"
+                    >
+                        {{ $t("applyAllTagUpdates") }}
+                    </button>
+                </div>
                 <div v-for="update in globalStack.updates" :key="update.service" class="update-detail-item">
                     <div class="d-flex align-items-center flex-wrap gap-2">
                         <span class="update-service-name">{{ update.service }}</span>
@@ -125,6 +134,17 @@
                         <span v-else class="update-version-info">
                             <span class="badge update-digest-label">{{ $t("newDigestAvailable") }}</span>
                         </span>
+
+                        <!-- En mode édition : proposer d'écrire le nouveau tag dans le compose -->
+                        <template v-if="isEditMode && update.updateKind === 'tag'">
+                            <span v-if="isTagUpdateApplied(update)" class="update-applied ms-auto">
+                                <font-awesome-icon icon="check" class="me-1" />
+                                {{ $t("tagUpdateApplied") }}
+                            </span>
+                            <button v-else class="btn btn-sm btn-normal ms-auto" @click="applyTagUpdate(update)">
+                                {{ $t("applyTagUpdate", [ update.remoteTag ]) }}
+                            </button>
+                        </template>
                     </div>
                     <div v-if="update.localCreated" class="update-pulled-date mt-1">
                         {{ $t("lastPulled") }}: {{ formatUpdateDate(update.localCreated) }}
@@ -511,6 +531,14 @@ export default {
 
         hasUpdates() {
             return this.globalStack?.updates?.length > 0;
+        },
+
+        /**
+         * Mises à jour de tag (semver) pas encore reportées dans le compose en cours d'édition
+         * @returns {object[]} Liste des mises à jour restantes
+         */
+        pendingTagUpdates() {
+            return (this.globalStack?.updates || []).filter(u => u.updateKind === "tag" && !this.isTagUpdateApplied(u));
         },
 
         stackStatusName() {
@@ -962,6 +990,77 @@ export default {
             this.isEditMode = true;
         },
 
+        /**
+         * Indique si le compose (après substitution des variables) utilise déjà le tag proposé
+         * @param {object} update Mise à jour de type "tag"
+         * @returns {boolean} true si le nouveau tag est déjà présent
+         */
+        isTagUpdateApplied(update) {
+            const image = this.envsubstJSONConfig?.services?.[update.service]?.image;
+            if (typeof image !== "string") {
+                return false;
+            }
+            return image === `${update.imageName}:${update.remoteTag}` || image.endsWith(`:${update.remoteTag}`);
+        },
+
+        /**
+         * Écrit le nouveau tag d'une mise à jour dans le compose.yaml (ou dans le .env
+         * si le tag est défini via une variable), en modifiant le texte ligne à ligne
+         * pour conserver la mise en forme et les commentaires.
+         * @param {object} update Mise à jour de type "tag"
+         * @param {boolean} silent Ne pas afficher de toast d'erreur
+         * @returns {boolean} true si le tag a été remplacé
+         */
+        applyTagUpdate(update, silent = false) {
+            const rawImage = this.jsonConfig?.services?.[update.service]?.image;
+            const escape = (str) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            let applied = false;
+
+            if (typeof rawImage === "string" && rawImage.endsWith(`:${update.currentTag}`)) {
+                // Tag écrit en dur dans le compose
+                const newImage = rawImage.slice(0, -update.currentTag.length) + update.remoteTag;
+                const lineRegex = new RegExp(`^(\\s*-?\\s*image:\\s*["']?)${escape(rawImage)}(["']?\\s*(#.*)?)$`);
+                this.stack.composeYAML = this.stack.composeYAML.split("\n").map((line) => {
+                    const m = line.match(lineRegex);
+                    if (m) {
+                        applied = true;
+                        return m[1] + newImage + m[2];
+                    }
+                    return line;
+                }).join("\n");
+            } else if (typeof rawImage === "string" && rawImage.includes("$")) {
+                // Tag défini via une variable du .env : on remplace sa valeur
+                const varNames = [ ...rawImage.matchAll(/\$\{?([A-Za-z_][A-Za-z0-9_]*)/g) ].map(m => m[1]);
+                const envLines = (this.stack.composeENV || "").split("\n");
+                for (let i = 0; i < envLines.length; i++) {
+                    const m = envLines[i].match(/^(\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*["']?)([^"'#\s]*)(["']?.*)$/);
+                    if (m && varNames.includes(m[2]) && m[3] === update.currentTag) {
+                        envLines[i] = m[1] + update.remoteTag + m[4];
+                        applied = true;
+                    }
+                }
+                if (applied) {
+                    this.stack.composeENV = envLines.join("\n");
+                }
+            }
+
+            if (applied) {
+                this.yamlCodeChange();
+            } else if (!silent) {
+                this.$root.toastError(this.$t("tagUpdateNotApplicable", [ update.service ]));
+            }
+            return applied;
+        },
+
+        /**
+         * Applique toutes les mises à jour de tag restantes
+         */
+        applyAllTagUpdates() {
+            for (const update of this.pendingTagUpdates) {
+                this.applyTagUpdate(update);
+            }
+        },
+
         checkYAML() {
 
         },
@@ -1291,6 +1390,15 @@ export default {
 
     .dark & {
         color: #f87171;
+    }
+}
+
+.update-applied {
+    color: #198754;
+    font-size: 13px;
+
+    .dark & {
+        color: #4ade80;
     }
 }
 

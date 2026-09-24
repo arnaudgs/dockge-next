@@ -6,8 +6,8 @@
                 <div class="image mb-2">
                     <span class="me-1">{{ imageName }}:</span><span class="tag">{{ imageTag }}</span>
                 </div>
-                <div v-if="!isEditMode">
-                    <span class="badge me-1" :class="bgStyle">{{ status }}</span>
+                <div>
+                    <span v-if="!isEditMode" class="badge me-1" :class="bgStyle">{{ status }}</span>
                     <span v-if="updateInfo" class="badge me-1 update-badge-container" :title="$t('updateAvailable')">
                         <font-awesome-icon icon="circle-up" />
                         <template v-if="updateInfo.updateKind === 'tag'">
@@ -19,7 +19,7 @@
                         </template>
                     </span>
 
-                    <a v-for="port in (ports ?? envsubstService.ports)" :key="port" :href="parsePort(port).url" target="_blank">
+                    <a v-for="port in (isEditMode ? [] : (ports ?? envsubstService.ports))" :key="port" :href="parsePort(port).url" target="_blank">
                         <span class="badge me-1 bg-secondary">{{ parsePort(port).display }}</span>
                     </a>
                 </div>
